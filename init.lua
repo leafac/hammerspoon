@@ -13,9 +13,8 @@ hs.hotkey.bind(mods, "return", function()
                      cantReloadHammerspoonConfigurationReason)
     end
 end)
-hs.hotkey.bind(mods, ",", function()
-    hs.open(hs.fs.pathToAbsolute("~/.hammerspoon/init.lua"))
-end)
+hs.hotkey
+    .bind(mods, ",", function() hs.execute("code ~/.hammerspoon", true) end)
 hs.hotkey.bind(mods, "escape", function() hs.toggleConsole() end)
 hs.hotkey.bind(mods, "space", function() hs.sound.getByName("Funk"):play() end)
 
