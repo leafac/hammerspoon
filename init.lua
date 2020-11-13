@@ -1,7 +1,7 @@
 hs.alert("Hammerspoon configuration reloaded")
 
 local mods = {"⌥", "⌃"}
-local roundedCornerRadius = 5
+local roundedCornerRadius = 10
 hs.window.animationDuration = 0
 
 local cantReloadHammerspoonConfigurationReason = nil
