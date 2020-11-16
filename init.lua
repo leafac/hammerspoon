@@ -164,7 +164,7 @@ function recording.start()
 • Shooting mode: Movie manual exp.
 • Shutter speed: 1/60
 • Aperture: F2.0
-• ISO speed: 200
+• ISO speed: 250
 • Exposure comp.: 0
 • Sound recording: Auto
 • Picture Style: Portrait
