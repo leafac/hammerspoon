@@ -301,3 +301,37 @@ end
 screenRoundedCorners.start()
 globalScreenRoundedCornersWatcherToPreventGarbageCollection =
     hs.screen.watcher.new(function() screenRoundedCorners.start() end):start()
+
+local screenBrightnessHack = {canvases = {}}
+hs.hotkey.bind(mods, "up", function()
+    hs.fnutils.each(screenBrightnessHack.canvases, function(canvas)
+        local newAlpha = math.max(0, canvas[1].fillColor.alpha - 0.1)
+        hs.alert(
+            "Brightness hack: " .. math.floor((1 - newAlpha) * 100 + 0.5) .. "%")
+        canvas[1].fillColor.alpha = newAlpha
+    end)
+end)
+hs.hotkey.bind(mods, "down", function()
+    hs.fnutils.each(screenBrightnessHack.canvases, function(canvas)
+        local newAlpha = math.min(1, canvas[1].fillColor.alpha + 0.1)
+        hs.alert(
+            "Brightness hack: " .. math.floor((1 - newAlpha) * 100 + 0.5) .. "%")
+        canvas[1].fillColor.alpha = newAlpha
+    end)
+end)
+function screenBrightnessHack.start()
+    hs.fnutils.each(screenBrightnessHack.canvases,
+                    function(canvas) canvas:delete() end)
+    screenBrightnessHack.canvases = hs.fnutils.map(hs.screen.allScreens(),
+                                                   function(screen)
+        return hs.canvas.new(screen:fullFrame()):appendElements(
+                   {
+                type = "rectangle",
+                action = "fill",
+                fillColor = {alpha = 0}
+            }):behavior({"canJoinAllSpaces", "stationary"}):show()
+    end)
+end
+screenBrightnessHack.start()
+globalScreenBrightnessHackWatcherToPreventGarbageCollection =
+    hs.screen.watcher.new(function() screenBrightnessHack.start() end):start()
