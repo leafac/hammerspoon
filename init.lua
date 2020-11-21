@@ -16,6 +16,7 @@ end)
 hs.hotkey
     .bind(mods, ",", function() hs.execute("code ~/.hammerspoon", true) end)
 hs.hotkey.bind(mods, "escape", function() hs.toggleConsole() end)
+-- FIXME: Sometimes I take too long; sometimes I don’t work at all!
 hs.hotkey.bind(mods, "space", function() hs.sound.getByName("Funk"):play() end)
 
 hs.hotkey.bind(mods, "W", function()
@@ -96,6 +97,7 @@ hs.hotkey.bind(mods, "B", function()
     })
 end)
 
+-- FIXME: There seems to be a bug when you start/stop recording multiple times.
 local recording = {
     isRecording = false,
     originalDefaultOutputDevice = {device = nil, muted = nil, volume = nil},
@@ -144,16 +146,13 @@ function recording.start()
     hs.dialog.blockAlert("Connect External Display", "")
     recording.originalFullFrame = hs.screen.primaryScreen():fullFrame()
     hs.screen.primaryScreen():setMode(1280, 720, 2)
+    hs.application.open("OBS")
     hs.dialog.blockAlert("Start Screen Recording",
-                         [[1. Start Screenshot (⌘⇧5).
+                         [[1. Open Kap.
 2. Check:
-• Record Entire Screen
-• Save to: Downloads
-• Timer: None
 • Microphone: Built-in Microphone
-• Show Floating Thumbnail: Off
-• Remember Last Selection: On
-• Show Mouse Clicks: On
+• Preferences: 30 FPS · Everything enabled except for “Start automatically”
+• Record Entire Screen
 3. Start recording.]])
 
     hs.dialog.blockAlert("Start Camera", [[1. Check:
@@ -335,3 +334,6 @@ end
 screenBrightnessHack.start()
 globalScreenBrightnessHackWatcherToPreventGarbageCollection =
     hs.screen.watcher.new(function() screenBrightnessHack.start() end):start()
+
+-- defaults -currentHost write -g AppleFontSmoothing -int 0 (https://tonsky.me/blog/monitors/)
+-- sudo rm -rf $(xcode-select -print-path) && sudo rm -rf /Library/Developer/CommandLineTools && sudo xcode-select --reset && xcode-select --install (https://github.com/nodejs/node-gyp/blob/master/macOS_Catalina.md#i-did-all-that-and-the-acid-test-still-does-not-pass--)
