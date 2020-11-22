@@ -216,6 +216,7 @@ function recording.start()
 • Computer sound.
 • Screen.
 • Camera.
+• Frame rate (restart camera if necessary).
 2. Start recording.
 ]])
 
