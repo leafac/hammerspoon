@@ -148,7 +148,7 @@ function recording.start()
 • Microphone plugged in.
 • Gain: 5.
 • Track armed for recording.
-6. Plug in camera:
+6. Check camera settings:
 • Mode: Movie manual exp.
 • Shutter speed: 1/50.
 • Aperture: F2.0.
@@ -169,6 +169,7 @@ function recording.start()
 • Servo AF: On.
 • Miniature effect movie: Off.
 • Frame.
+7. Plug in camera.
 ]])
 
     local originalDefaultOutputDevice = hs.audiodevice.defaultOutputDevice()
