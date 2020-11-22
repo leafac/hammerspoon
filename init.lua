@@ -105,12 +105,11 @@ local RECORDING_STATES = {
 local recording = {
     state = RECORDING_STATES.NOT_RECORDING,
     originalDefaultAudioDevices = {
-        input = {device = nil, muted = nil, volume = nil},
-        output = {device = nil, muted = nil, volume = nil}
+        input = {name = nil, muted = nil, volume = nil},
+        output = {name = nil, muted = nil, volume = nil}
     },
     frame = {w = 1280, h = 720},
     originalFrame = nil,
-    applications = {cameraLive = nil, obs = nil},
     cameraOverlay = {padding = 3, canvas = nil},
     usbWatcher = nil
 }
@@ -173,8 +172,8 @@ function recording.start()
 ]])
 
     local originalDefaultOutputDevice = hs.audiodevice.defaultOutputDevice()
-    recording.originalDefaultAudioDevices.output.device =
-        originalDefaultOutputDevice
+    recording.originalDefaultAudioDevices.output.name =
+        originalDefaultOutputDevice:name()
     recording.originalDefaultAudioDevices.output.muted =
         originalDefaultOutputDevice:outputMuted()
     recording.originalDefaultAudioDevices.output.volume =
@@ -189,8 +188,8 @@ function recording.start()
     blackHole:setOutputVolume(100)
     hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
     local originalDefaultInputDevice = hs.audiodevice.defaultInputDevice()
-    recording.originalDefaultAudioDevices.input.device =
-        originalDefaultInputDevice
+    recording.originalDefaultAudioDevices.input.name =
+        originalDefaultInputDevice:name()
     recording.originalDefaultAudioDevices.input.muted =
         originalDefaultInputDevice:inputMuted()
     recording.originalDefaultAudioDevices.input.volume =
@@ -199,14 +198,18 @@ function recording.start()
     h5:setInputMuted(false)
     h5:setDefaultInputDevice()
     local audioMIDISetup = hs.application.open("Audio MIDI Setup")
-    hs.dialog.blockAlert("", "Check that audio devices are running at 48kHz.")
+    hs.dialog.blockAlert("", [[
+• Sound Output: Built-in Output + BlackHole 16ch.
+• Sound Input: H5.
+• Sample Rate: 48.0kHz.
+]])
     audioMIDISetup:kill()
 
     recording.originalFrame = hs.screen.primaryScreen():fullFrame()
     hs.screen.primaryScreen():setMode(recording.frame.w, recording.frame.h, 2)
 
-    recording.applications.cameraLive = hs.application.open("Camera Live")
-    recording.applications.obs = hs.application.open("OBS")
+    hs.application.open("Camera Live")
+    hs.application.open("OBS")
     hs.dialog.blockAlert("", [[
 1. Check:
 • Microphone.
@@ -257,21 +260,23 @@ function recording.stop()
 6. Turn off the recording lights.
 ]])
 
-    recording.applications.cameraLive:kill()
-    recording.applications.obs:kill()
+    hs.application.get("Camera Live"):kill()
+    hs.application.get("OBS"):kill()
 
     local originalFrame = recording.originalFrame
     hs.screen.primaryScreen():setMode(originalFrame.w, originalFrame.h, 2)
 
-    local originalDefaultInputDevice = recording.originalDefaultAudioDevices
-                                           .input.device
+    local originalDefaultInputDevice = hs.audiodevice.findInputByName(
+                                           recording.originalDefaultAudioDevices
+                                               .input.name)
     originalInputDevice:setDefaultInputDevice()
     originalInputDevice:setInputMuted(recording.originalDefaultAudioDevices
                                           .input.muted)
     originalInputDevice:setInputVolume(recording.originalDefaultAudioDevices
                                            .input.volume)
-    local originalDefaultOutputDevice = recording.originalDefaultAudioDevices
-                                            .output.device
+    local originalDefaultOutputDevice = hs.audiodevice.findOutputByName(
+                                            recording.originalDefaultAudioDevices
+                                                .output.name)
     originalOutputDevice:setDefaultOutputDevice()
     originalOutputDevice:setOutputMuted(recording.originalDefaultAudioDevices
                                             .output.muted)
