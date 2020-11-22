@@ -269,18 +269,18 @@ function recording.stop()
     local originalDefaultInputDevice = hs.audiodevice.findInputByName(
                                            recording.originalDefaultAudioDevices
                                                .input.name)
-    originalInputDevice:setDefaultInputDevice()
-    originalInputDevice:setInputMuted(recording.originalDefaultAudioDevices
-                                          .input.muted)
-    originalInputDevice:setInputVolume(recording.originalDefaultAudioDevices
-                                           .input.volume)
+    originalDefaultInputDevice:setDefaultInputDevice()
+    originalDefaultInputDevice:setInputMuted(
+        recording.originalDefaultAudioDevices.input.muted)
+    originalDefaultInputDevice:setInputVolume(
+        recording.originalDefaultAudioDevices.input.volume)
     local originalDefaultOutputDevice = hs.audiodevice.findOutputByName(
                                             recording.originalDefaultAudioDevices
                                                 .output.name)
-    originalOutputDevice:setDefaultOutputDevice()
-    originalOutputDevice:setOutputMuted(recording.originalDefaultAudioDevices
-                                            .output.muted)
-    originalOutputDevice:setOutputVolume(
+    originalDefaultOutputDevice:setDefaultOutputDevice()
+    originalDefaultOutputDevice:setOutputMuted(
+        recording.originalDefaultAudioDevices.output.muted)
+    originalDefaultOutputDevice:setOutputVolume(
         recording.originalDefaultAudioDevices.output.volume)
 
     local projectOption, projectName = hs.dialog.textPrompt("Project name:", "",
