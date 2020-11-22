@@ -125,7 +125,7 @@ hs.hotkey.bind({"⌘", "⇧"}, "2", function()
             "ERROR: Failed to start recording: Recording is already starting.")
     elseif recording.state == RECORDING_STATES.RECORDING then
         recording.state = RECORDING_STATES.STOPPING
-        record.stop()
+        recording.stop()
         recording.state = RECORDING_STATES.NOT_RECORDING
         cantReloadHammerspoonConfigurationReason = nil
     elseif recording.state == RECORDING_STATES.STOPPING then
@@ -148,7 +148,7 @@ function recording.start()
 • Microphone plugged in.
 • Gain: 5.
 • Track armed for recording.
-6. Check camera settings:
+6. Check unplugged camera settings:
 • Mode: Movie manual exp.
 • Shutter speed: 1/50.
 • Aperture: F2.0.
