@@ -251,6 +251,7 @@ function recording.stop()
 
     recording.cameraOverlay.canvas:delete()
 
+    hs.application.open("OBS")
     hs.dialog.blockAlert("", [[
 1. Stop recording.
 2. Turn off camera.
@@ -288,21 +289,25 @@ function recording.stop()
                                                             "Create Project",
                                                             "Cancel")
     if projectOption ~= "Cancel" then
-        local projectPath = [[~/Videos/"]] .. projectName .. [["]]
-        local recordingFullPath = string.gsub(
+        local projectDirectory = [[~/Videos/"]] .. projectName .. [["]]
+        local projectFile = projectDirectory .. [[/"]] .. projectName ..
+                                [[".RPP]]
+        local recordingFile = [["]] ..
+                                  string.gsub(
                                       hs.execute(
                                           [[ls ~/Videos/*.mkv | tail -n 1]]),
-                                      "%s*$", "")
-        if recordingFullPath ~= "" then
-            hs.execute([[mkdir ]] .. projectPath ..
+                                      "%s*$", "") .. [["]]
+        if recordingFile ~= [[""]] then
+            hs.execute([[mkdir ]] .. projectDirectory ..
                            [[ && cp ~/Videos/TEMPLATE/TEMPLATE.RPP ]] ..
-                           projectPath .. [[/"]] .. projectName ..
-                           [[".RPP && ~/Videos/TEMPLATE/ffmpeg -i "]] ..
-                           recordingFullPath .. [[" -map 0:0 -c copy ]] ..
-                           projectPath .. [[/video.mp4 -map 0:1 -c copy ]] ..
-                           projectPath .. [[/microphone.aac -map 0:2 -c copy ]] ..
-                           projectPath .. [[/computer.aac && mv ]] ..
-                           recordingFullPath .. [[ ~/.Trash]])
+                           projectFile .. [[ && ~/Videos/TEMPLATE/ffmpeg -i ]] ..
+                           recordingFile .. [[ -map 0:0 -c copy ]] ..
+                           projectDirectory .. [[/video.mp4 -map 0:1 -c copy ]] ..
+                           projectDirectory ..
+                           [[/microphone.aac -map 0:2 -c copy ]] ..
+                           projectDirectory .. [[/computer.aac && mv ]] ..
+                           recordingFile .. [[ ~/.Trash && open ]] ..
+                           projectFile)
         else
             hs.alert(
                 "ERROR: Failed to create project because couldn’t find a recording.")
