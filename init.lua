@@ -214,9 +214,8 @@ function recording.start()
 1. Check:
 • Microphone.
 • Computer sound.
-• Screen.
-• Camera.
-• Camera frame rate (restart camera if necessary).
+• Screen (cut off).
+• Camera (frame rate).
 2. Start recording.
 ]])
 
