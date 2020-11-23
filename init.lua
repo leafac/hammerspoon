@@ -129,7 +129,7 @@ function recording.start()
 
     hs.application.open("OBS")
 
-    local frame = {w = 1280, w = 720}
+    local frame = {w = 1280, h = 720}
     local padding = 3
     recording.cameraOverlay.canvas = hs.canvas.new(
                                          {
@@ -202,8 +202,10 @@ function recording.cameraOverlay.restart()
         recording.cameraOverlay.timer:stop()
     end
     recording.cameraOverlay.canvas[1].fillColor.red = 0
-    recording.cameraOverlay.timer = hs.timer.doAfter(5, -- hs.timer.minutes(27),
-    function() recording.cameraOverlay.canvas[1].fillColor.red = 1 end)
+    recording.cameraOverlay.timer = hs.timer.doAfter(hs.timer.minutes(27),
+                                                     function()
+        recording.cameraOverlay.canvas[1].fillColor.red = 1
+    end)
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
