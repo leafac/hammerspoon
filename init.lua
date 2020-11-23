@@ -187,7 +187,8 @@ function recording.stop()
                        projectDirectory .. [[/computer.mp4 -map 0:1 -c copy ]] ..
                        projectDirectory .. [[/microphone.aac -map 0:2 -c copy ]] ..
                        projectDirectory .. [[/computer.aac && mv ]] ..
-                       recordingFile .. [[ ~/.Trash && open ]] .. projectFile)
+                       recordingFile .. [[ ~/.Trash && open ]] .. projectFile ..
+                       [[ && open ]] .. projectDirectory)
     end
 end
 function recording.cameraOverlay.restart()
