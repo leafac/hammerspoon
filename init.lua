@@ -96,81 +96,55 @@ hs.hotkey.bind(mods, "B", function()
     })
 end)
 
-local RECORDING_STATES = {
-    NOT_RECORDING = 1,
-    STARTING = 2,
-    RECORDING = 3,
-    STOPPING = 4
-}
 local recording = {
-    state = RECORDING_STATES.NOT_RECORDING,
+    STATES = {NOT_RECORDING = 1, STARTING = 2, RECORDING = 3, STOPPING = 4},
+    state = 1,
     originalDefaultAudioDevices = {
         input = {name = nil, muted = nil, volume = nil},
         output = {name = nil, muted = nil, volume = nil}
     },
+    usbWatcher = nil,
     frame = {w = 1280, h = 720},
     originalFrame = nil,
-    cameraOverlay = {padding = 3, canvas = nil},
-    usbWatcher = nil
+    cameraOverlay = {
+        padding = 3,
+        canvas = nil,
+        timer = {duration = hs.timer.minutes(27), timer = nil}
+    }
 }
 hs.hotkey.bind({"⌘", "⇧"}, "2", function()
-    if recording.state == RECORDING_STATES.NOT_RECORDING then
+    if recording.state == recording.STATES.NOT_RECORDING then
         cantReloadHammerspoonConfigurationReason = "Recording."
-        recording.state = RECORDING_STATES.STARTING
+        recording.state = recording.STATES.STARTING
         recording.start()
-        recording.state = RECORDING_STATES.RECORDING
-    elseif recording.state == RECORDING_STATES.STARTING then
+        recording.state = recording.STATES.RECORDING
+    elseif recording.state == recording.STATES.STARTING then
         hs.alert(
             "ERROR: Failed to start recording: Recording is already starting.")
-    elseif recording.state == RECORDING_STATES.RECORDING then
-        recording.state = RECORDING_STATES.STOPPING
+    elseif recording.state == recording.STATES.RECORDING then
+        recording.state = recording.STATES.STOPPING
         recording.stop()
-        recording.state = RECORDING_STATES.NOT_RECORDING
+        recording.state = recording.STATES.NOT_RECORDING
         cantReloadHammerspoonConfigurationReason = nil
-    elseif recording.state == RECORDING_STATES.STOPPING then
+    elseif recording.state == recording.STATES.STOPPING then
         hs.alert(
             "ERROR: Failed to stop recording: Recording is already stopping.")
     end
 end)
+hs.hotkey.bind(mods, "V", function()
+    if recording.state ~= recording.STATES.RECORDING then return end
+    local canvas = recording.cameraOverlay.canvas
+    if canvas:isShowing() then
+        canvas:hide()
+    else
+        canvas:show()
+    end
+end)
+hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
+    if recording.state ~= recording.STATES.RECORDING then return end
+    recoding.cameraOverlay.timer.start()
+end)
 function recording.start()
-    hs.dialog.blockAlert("", [[
-1. Turn on the room lights.
-2. Turn on the recording lights.
-3. Close the window.
-4. Plug in headphones.
-5. Plug in audio interface:
-• Audio Interface.
-• Multi Track.
-• PC/Mac (Bus Powered).
-• Effects disabled.
-• 48kHz.
-• Microphone plugged in.
-• Gain: 5.
-• Track armed for recording.
-6. Check unplugged camera settings:
-• Mode: Movie manual exp.
-• Shutter speed: 1/50.
-• Aperture: F2.0.
-• ISO speed: 250.
-• Exposure comp.: 0.
-• Sound recording: Auto.
-• Picture Style: Portrait.
-• Color temp.: K5000.
-• WB correction: 0, 0.
-• Auto Lighting Optimizer: Off.
-• AF method: AF Face Tracking.
-• Wind filter: Auto.
-• Attenuator (ATT): Auto.
-• Movie rec. size: FHD 25.00P (1920x1080).
-• Battery: Charged.
-• Wireless communication: Off.
-• Image stabilization: Off.
-• Servo AF: On.
-• Miniature effect movie: Off.
-• Frame.
-7. Plug in camera.
-]])
-
     local originalDefaultOutputDevice = hs.audiodevice.defaultOutputDevice()
     recording.originalDefaultAudioDevices.output.name =
         originalDefaultOutputDevice:name()
@@ -197,27 +171,16 @@ function recording.start()
     local h5 = hs.audiodevice.findInputByName("H5")
     h5:setInputMuted(false)
     h5:setDefaultInputDevice()
-    local audioMIDISetup = hs.application.open("Audio MIDI Setup")
-    hs.dialog.blockAlert("", [[
-• Sound Output: Built-in Output + BlackHole 16ch.
-• Sound Input: H5.
-• Sample Rate: 48.0kHz.
-]])
-    audioMIDISetup:kill()
+
+    recording.usbWatcher = hs.usb.watcher.new(
+                               function(event)
+            hs.dialog.blockAlert("", hs.inspect(event))
+        end):start()
 
     recording.originalFrame = hs.screen.primaryScreen():fullFrame()
     hs.screen.primaryScreen():setMode(recording.frame.w, recording.frame.h, 2)
 
-    hs.application.open("Camera Live")
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", [[
-1. Check:
-• Microphone.
-• Computer sound.
-• Screen (cut off).
-• Camera (frame rate).
-2. Start recording.
-]])
 
     recording.cameraOverlay.canvas = hs.canvas.new(
                                          {
@@ -240,49 +203,35 @@ function recording.start()
             yRadius = roundedCornerRadius
         }
     }):behavior({"canJoinAllSpaces", "stationary"}):show()
-
-    recording.usbWatcher = hs.usb.watcher.new(
-                               function(event)
-            hs.dialog.blockAlert("", hs.inspect(event))
-        end):start()
+    recoding.cameraOverlay.timer.start()
 end
 function recording.stop()
-    recording.usbWatcher:stop()
-
+    recording.cameraOverlay.timer:stop()
     recording.cameraOverlay.canvas:delete()
 
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("", [[
-1. Stop recording.
-2. Turn off camera.
-3. Put camera battery on charger.
-4. Turn off audio interface.
-5. Open the window.
-6. Turn off the recording lights.
-]])
-
-    hs.application.get("Camera Live"):kill()
     hs.application.get("OBS"):kill()
 
     local originalFrame = recording.originalFrame
     hs.screen.primaryScreen():setMode(originalFrame.w, originalFrame.h, 2)
 
+    recording.usbWatcher:stop()
+
     local originalDefaultInputDevice = hs.audiodevice.findInputByName(
                                            recording.originalDefaultAudioDevices
                                                .input.name)
     originalDefaultInputDevice:setDefaultInputDevice()
-    originalDefaultInputDevice:setInputMuted(
-        recording.originalDefaultAudioDevices.input.muted)
     originalDefaultInputDevice:setInputVolume(
         recording.originalDefaultAudioDevices.input.volume)
+    originalDefaultInputDevice:setInputMuted(
+        recording.originalDefaultAudioDevices.input.muted)
     local originalDefaultOutputDevice = hs.audiodevice.findOutputByName(
                                             recording.originalDefaultAudioDevices
                                                 .output.name)
     originalDefaultOutputDevice:setDefaultOutputDevice()
-    originalDefaultOutputDevice:setOutputMuted(
-        recording.originalDefaultAudioDevices.output.muted)
     originalDefaultOutputDevice:setOutputVolume(
         recording.originalDefaultAudioDevices.output.volume)
+    originalDefaultOutputDevice:setOutputMuted(
+        recording.originalDefaultAudioDevices.output.muted)
 
     local projectOption, projectName = hs.dialog.textPrompt("Project name:", "",
                                                             "",
@@ -300,9 +249,12 @@ function recording.stop()
         if recordingFile ~= [[""]] then
             hs.execute([[mkdir ]] .. projectDirectory ..
                            [[ && cp ~/Videos/TEMPLATE/TEMPLATE.RPP ]] ..
-                           projectFile .. [[ && ~/Videos/TEMPLATE/ffmpeg -i ]] ..
-                           recordingFile .. [[ -map 0:0 -c copy ]] ..
-                           projectDirectory .. [[/video.mp4 -map 0:1 -c copy ]] ..
+                           projectFile ..
+                           [[ && cp ~/Videos/TEMPLATE/rounded-corners.png ]] ..
+                           projectDirectory ..
+                           [[ && ~/Videos/TEMPLATE/ffmpeg -i ]] .. recordingFile ..
+                           [[ -map 0:0 -c copy ]] .. projectDirectory ..
+                           [[/computer.mp4 -map 0:1 -c copy ]] ..
                            projectDirectory ..
                            [[/microphone.aac -map 0:2 -c copy ]] ..
                            projectDirectory .. [[/computer.aac && mv ]] ..
@@ -313,6 +265,23 @@ function recording.stop()
                 "ERROR: Failed to create project because couldn’t find a recording.")
         end
     end
+end
+function recoding.cameraOverlay.timer.start()
+    hs.dialog.blockAlert("", [[
+1. Microphone.
+2. Computer audio.
+3. Computer screen.
+4. Camera.
+5. CLAP!
+]])
+    if recording.cameraOverlay.timer.timer then
+        recording.cameraOverlay.timer.timer:stop()
+    end
+    recording.cameraOverlay.canvas[1].fillColor.red = 0
+    recording.cameraOverlay.timer.timer =
+        hs.timer.doAfter(recording.cameraOverlay.timer.duration, function()
+            recording.cameraOverlay.canvas[1].fillColor.red = 1
+        end)
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
