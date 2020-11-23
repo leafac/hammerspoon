@@ -142,7 +142,7 @@ hs.hotkey.bind(mods, "V", function()
 end)
 hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
     if recording.state ~= recording.STATES.RECORDING then return end
-    recoding.cameraOverlay.timer.start()
+    recording.cameraOverlay.timer.start()
 end)
 function recording.start()
     local originalDefaultOutputDevice = hs.audiodevice.defaultOutputDevice()
@@ -203,10 +203,10 @@ function recording.start()
             yRadius = roundedCornerRadius
         }
     }):behavior({"canJoinAllSpaces", "stationary"}):show()
-    recoding.cameraOverlay.timer.start()
+    recording.cameraOverlay.timer.start()
 end
 function recording.stop()
-    recording.cameraOverlay.timer:stop()
+    recording.cameraOverlay.timer.timer:stop()
     recording.cameraOverlay.canvas:delete()
 
     hs.application.get("OBS"):kill()
@@ -266,11 +266,11 @@ function recording.stop()
         end
     end
 end
-function recoding.cameraOverlay.timer.start()
+function recording.cameraOverlay.timer.start()
     hs.dialog.blockAlert("", [[
 1. Microphone.
 2. Computer audio.
-3. Computer screen.
+3. OBS.
 4. Camera.
 5. CLAP!
 ]])
