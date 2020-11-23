@@ -9,7 +9,7 @@ hs.hotkey.bind(mods, "return", function()
     if not cantReloadHammerspoonConfigurationReason then
         hs.reload()
     else
-        hs.alert("ERROR: Can’t reload Hammerspoon configuration: " ..
+        hs.alert("[ERROR] Can’t reload Hammerspoon configuration: " ..
                      cantReloadHammerspoonConfigurationReason)
     end
 end)
@@ -114,13 +114,13 @@ local recording = {
 }
 hs.hotkey.bind({"⌘", "⇧"}, "2", function()
     if recording.state == recording.STATES.NOT_RECORDING then
-        cantReloadHammerspoonConfigurationReason = "Recording."
+        cantReloadHammerspoonConfigurationReason = "Recording"
         recording.state = recording.STATES.STARTING
         recording.start()
         recording.state = recording.STATES.RECORDING
     elseif recording.state == recording.STATES.STARTING then
         hs.alert(
-            "ERROR: Failed to start recording: Recording is already starting.")
+            "[ERROR] Failed to start recording: Recording is already starting")
     elseif recording.state == recording.STATES.RECORDING then
         recording.state = recording.STATES.STOPPING
         recording.stop()
@@ -128,7 +128,7 @@ hs.hotkey.bind({"⌘", "⇧"}, "2", function()
         cantReloadHammerspoonConfigurationReason = nil
     elseif recording.state == recording.STATES.STOPPING then
         hs.alert(
-            "ERROR: Failed to stop recording: Recording is already stopping.")
+            "[ERROR] Failed to stop recording: Recording is already stopping")
     end
 end)
 hs.hotkey.bind(mods, "V", function()
@@ -262,7 +262,7 @@ function recording.stop()
                            projectFile)
         else
             hs.alert(
-                "ERROR: Failed to create project because couldn’t find a recording.")
+                "[ERROR] Failed to create project: Failed to find recording")
         end
     end
 end
