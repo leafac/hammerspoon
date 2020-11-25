@@ -252,6 +252,10 @@ function recording.modal:exited()
   >
 >
 ]])
+        project = string.gsub(project, ">%s*$", [[
+MARKER 0 ]] .. event.start .. [[ ""
+%0
+]])
     end
     local projectFile = projectDirectory .. [[/]] .. projectName .. [[.RPP]]
     local projectFileHandle = io.open(projectFile, "w")
