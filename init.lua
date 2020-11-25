@@ -133,7 +133,7 @@ function recording.modal:entered()
         tap:stop()
     end):start()
     hs.dialog.blockAlert("", "", "Click me right as you start the camera")
-    recording.events.camera = {hs.timer.secondsSinceEpoch()}
+    recording.events.camera = {start = hs.timer.secondsSinceEpoch(), stop = nil}
     hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
 
     -- local frame = {w = 1280, h = 720}
@@ -162,11 +162,14 @@ function recording.modal:entered()
     -- recording.cameraOverlay.restart()
 end
 recording.modal:bind({"⌘", "⇧"}, "2", function()
+    recording.events.camera[#recording.events.camera].stop =
+        hs.timer.secondsSinceEpoch()
     local option = hs.dialog.blockAlert("Stop the camera", "",
                                         "Click me right as you restart camera",
                                         "Stop Recording")
     if option == "Click me right as you restart camera" then
-        table.insert(recording.events.camera, hs.timer.secondsSinceEpoch())
+        table.insert(recording.events.camera,
+                     {start = hs.timer.secondsSinceEpoch(), stop = nil})
         hs.json.write(recording.events, "~/Videos/events-backup.json", true,
                       true)
     elseif option == "Stop Recording" then
@@ -233,17 +236,16 @@ function recording.modal:exited()
     local templateDirectory = projectsDirectory .. "/TEMPLATE"
     local templateFileHandle =
         io.open(templateDirectory .. "/TEMPLATE.RPP", "r")
-    local template = templateFileHandle:read("*all")
+    local project = templateFileHandle:read("*all")
     templateFileHandle:close()
-    template = string.gsub(template, "LENGTH 5", "LENGTH " ..
-                               recording.events.stop - recording.events.start)
-    for index, start in ipairs(recording.events.camera) do
-        template = string.gsub(template, "NAME Camera", [[%0
+    project = string.gsub(project, "LENGTH 5", "LENGTH " ..
+                              recording.events.stop - recording.events.start)
+    for index, event in ipairs(recording.events.camera) do
+        project = string.gsub(project, "NAME Camera", [[%0
 <ITEM
-  POSITION ]] .. start - recording.events.start .. [[
+  POSITION ]] .. event.start - recording.events.start .. [[
 
-  LENGTH ]] .. (recording.events.camera[index + 1] or recording.events.stop) -
-                                   start .. [[
+  LENGTH ]] .. event.stop - event.start .. [[
 
   <SOURCE VIDEO
     FILE "camera--]] .. index .. [[.mp4"
@@ -253,7 +255,7 @@ function recording.modal:exited()
     end
     local projectFile = projectDirectory .. [[/]] .. projectName .. [[.RPP]]
     local projectFileHandle = io.open(projectFile, "w")
-    projectFileHandle:write(template)
+    projectFileHandle:write(project)
     projectFileHandle:close()
     hs.execute([[mv ~/Videos/events-backup.json ~/.Trash]])
 
