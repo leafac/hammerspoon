@@ -241,7 +241,8 @@ function recording.modal:exited()
     project = string.gsub(project, "LENGTH 5", "LENGTH " ..
                               recording.events.stop - recording.events.start)
     for index, event in ipairs(recording.events.camera) do
-        project = string.gsub(project, "NAME Camera", [[%0
+        project = string.gsub(project, "NAME Camera", [[
+%0
 <ITEM
   POSITION ]] .. event.start - recording.events.start .. [[
 
