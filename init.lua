@@ -88,7 +88,6 @@ hs.hotkey.bind(mods, "B", function()
     })
 end)
 
--- TODO: Give myself multiple chances when clicking to start recording.
 local recording = {
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
     usbWatcher = nil,
@@ -96,25 +95,24 @@ local recording = {
     -- cameraOverlay = {canvas = nil, timer = nil}
 }
 recording.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("", "", "Restart Camera",
+    local option = hs.dialog.blockAlert("", "",
+                                        "Click me right as you restart camera",
                                         "Stop Recording")
-    if option == "Restart Camera" then
-        recording.camera.stop()
-        recording.camera.start()
+    if option == "Click me right as you restart camera" then
+        table.insert(recording.events.camera, hs.timer.secondsSinceEpoch())
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
     elseif option == "Stop Recording" then
         recording.modal:exit()
     end
 end)
 function recording.modal:entered()
     hs.dialog.blockAlert("", [[
-1. Prepare recording space:
-• Doors.
-• Lights.
-• Windows.
-2. Connect recording devices:
-• Audio interface.
-• Camera.
-• Headphones.
+1. Doors.
+2. Lights.
+3. Windows.
+4. Audio interface.
+5. Camera.
+6. Headphones.
 ]])
 
     recording.usbWatcher = hs.usb.watcher.new(
@@ -130,24 +128,21 @@ function recording.modal:entered()
     hs.screen.primaryScreen():setMode(1280, 720, 2)
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", [[
+    hs.dialog.blockAlert("OBS", [[
 1. Microphone.
 2. Computer audio.
 3. Screen.
-]], "Click me when your next click will be to “Start Recording” in OBS")
-    local startTap
-    startTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
-                               function(event)
+]], "Click me when your next click will be to “Start Recording”")
+    local tap
+    tap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
+                          function(event)
         recording.events.start = hs.timer.secondsSinceEpoch()
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
-        hs.alert("Started recording in OBS")
-        startTap:stop()
+        tap:stop()
     end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after having started recording in OBS")
-
-    recording.events.camera = {}
-    recording.camera.start()
+    recording.events.start = hs.timer.secondsSinceEpoch()
+    hs.dialog.blockAlert("", "", "Click me right as you start the camera")
+    recording.events.camera = {hs.timer.secondsSinceEpoch()}
+    hs.json.write(recording.events, "~/Videos/events.json", true, true)
 
     -- local frame = {w = 1280, h = 720}
     -- local padding = 3
@@ -178,21 +173,11 @@ function recording.modal:exited()
     -- recording.cameraOverlay.timer:stop()
     -- recording.cameraOverlay.canvas:delete()
 
-    recording.camera.stop()
-
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", "",
-                         "Click me when your next click will be to “Stop Recording” in OBS")
-    local stopTap
-    stopTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
-                              function(event)
-        recording.events.stop = hs.timer.secondsSinceEpoch()
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
-        hs.alert("Stopped recording in OBS")
-        stopTap:stop()
-    end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after having stopped recording in OBS")
+    hs.dialog.blockAlert("OBS", "",
+                         "Click me after you have stopped the recording")
+    recording.events.stop = hs.timer.secondsSinceEpoch()
+    hs.json.write(recording.events, "~/Videos/events.json", true, true)
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
 
@@ -216,9 +201,9 @@ function recording.modal:exited()
                                       "")
     hs.execute([[~/Videos/TEMPLATE/ffmpeg -i "]] .. recordingFile ..
                    [[" -map 0:0 -c copy "]] .. projectDirectory ..
-                   [["/computer.mp4 -map 0:1 -c copy "]] .. projectDirectory ..
-                   [["/microphone.aac -map 0:2 -c copy "]] .. projectDirectory ..
-                   [["/computer.aac && mv "]] .. recordingFile .. [[" ~/.Trash]])
+                   [[/computer.mp4" -map 0:1 -c copy "]] .. projectDirectory ..
+                   [[/microphone.aac" -map 0:2 -c copy "]] .. projectDirectory ..
+                   [[/computer.aac" && mv "]] .. recordingFile .. [[" ~/.Trash]])
 
     hs.dialog.blockAlert("", "",
                          "Click me when the recordings from the camera have been transferred to the computer")
@@ -231,7 +216,7 @@ function recording.modal:exited()
                                      ""), "\n")
     for index, cameraRecording in ipairs(cameraRecordings) do
         hs.execute([[mv "]] .. cameraRecording .. [[" "]] .. projectDirectory ..
-                       [["/camera--]] .. index .. [[.mp4]])
+                       [[/camera--]] .. index .. [[.mp4"]])
     end
 
     local templateDirectory = projectsDirectory .. "/TEMPLATE"
@@ -241,13 +226,13 @@ function recording.modal:exited()
     templateFileHandle:close()
     template = string.gsub(template, "LENGTH 5", "LENGTH " ..
                                recording.events.stop - recording.events.start)
-    for index = 1, #recording.events.camera do
-        local event = recording.events.camera[index]
+    for index, start in ipairs(recording.events.camera) do
         template = string.gsub(template, "NAME Camera", [[%0
 <ITEM
-  POSITION ]] .. event.start - recording.events.start .. [[
+  POSITION ]] .. start - recording.events.start .. [[
 
-  LENGTH ]] .. event.stop - event.start .. [[
+  LENGTH ]] .. (recording.events.camera[index + 1] or recording.events.stop) -
+                                   start .. [[
 
   <SOURCE VIDEO
     FILE "camera--]] .. index .. [[.mp4"
@@ -261,46 +246,13 @@ function recording.modal:exited()
     projectFileHandle:close()
     hs.execute([[mv ~/Videos/events.json ~/.Trash]])
 
-    hs.execute([[cp "]] .. templateDirectory .. [["/rounded-corners.png "]] ..
+    hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
 
     hs.application.get("EOS Utility 3"):kill()
     hs.application.get("OBS"):kill()
 
-    hs.execute([[open ]] .. projectFile)
-end
-recording.camera = {}
-function recording.camera.start()
-    hs.application.open("EOS Utility 3")
-    hs.dialog.blockAlert("", "",
-                         "Click me when your next click will be to start recording in the camera")
-    local eventTap
-    eventTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
-                               function(event)
-        table.insert(recording.events.camera,
-                     {start = hs.timer.secondsSinceEpoch(), stop = nil})
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
-        hs.alert("Started recording in the camera")
-        eventTap:stop()
-    end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after having started recording in the camera")
-end
-function recording.camera.stop()
-    hs.application.open("EOS Utility 3")
-    hs.dialog.blockAlert("", "",
-                         "Click me when your next click will be to stop recording in the camera")
-    local eventTap
-    eventTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
-                               function(event)
-        recording.events.camera[#recording.events.camera].stop =
-            hs.timer.secondsSinceEpoch()
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
-        hs.alert("Stopped recording in the camera")
-        eventTap:stop()
-    end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after having stopped recording in the camera")
+    hs.execute([[open "]] .. projectFile .. [["]])
 end
 -- hs.hotkey.bind(mods, "V", function()
 --     if not recording.isRecording then return end
