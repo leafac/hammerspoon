@@ -137,10 +137,11 @@ function recording.modal:entered()
     tap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
                           function(event)
         recording.events.start = hs.timer.secondsSinceEpoch()
+        hs.alert("“Start Recording” captured")
         tap:stop()
     end):start()
-    recording.events.start = hs.timer.secondsSinceEpoch()
     hs.dialog.blockAlert("", "", "Click me right as you start the camera")
+    hs.application.open("OBS"):mainWindow():minimize()
     recording.events.camera = {hs.timer.secondsSinceEpoch()}
     hs.json.write(recording.events, "~/Videos/events.json", true, true)
 
@@ -170,14 +171,18 @@ function recording.modal:entered()
     -- recording.cameraOverlay.restart()
 end
 function recording.modal:exited()
+    recording.events.stop = hs.timer.secondsSinceEpoch()
+    hs.json.write(recording.events, "~/Videos/events.json", true, true)
+
     -- recording.cameraOverlay.timer:stop()
     -- recording.cameraOverlay.canvas:delete()
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("OBS", "",
-                         "Click me after you have stopped the recording")
-    recording.events.stop = hs.timer.secondsSinceEpoch()
-    hs.json.write(recording.events, "~/Videos/events.json", true, true)
+    hs.dialog.blockAlert("", [[
+1. Stop camera.
+2. Stop recording in OBS.
+]])
+    hs.application.get("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
 
@@ -248,9 +253,6 @@ function recording.modal:exited()
 
     hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
-
-    hs.application.get("EOS Utility 3"):kill()
-    hs.application.get("OBS"):kill()
 
     hs.execute([[open "]] .. projectFile .. [["]])
 end
