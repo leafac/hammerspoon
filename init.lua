@@ -88,6 +88,7 @@ hs.hotkey.bind(mods, "B", function()
     })
 end)
 
+-- TODO: Give myself multiple chances when clicking to start recording.
 local recording = {
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
     usbWatcher = nil,
@@ -142,8 +143,10 @@ function recording.modal:entered()
         hs.alert("Started recording in OBS")
         startTap:stop()
     end):start()
-    hs.dialog.blockAlert("", "", "Click me after started recording in OBS")
+    hs.dialog.blockAlert("", "",
+                         "Click me after having started recording in OBS")
 
+    recording.events.camera = {}
     recording.camera.start()
 
     -- local frame = {w = 1280, h = 720}
@@ -188,7 +191,8 @@ function recording.modal:exited()
         hs.alert("Stopped recording in OBS")
         stopTap:stop()
     end):start()
-    hs.dialog.blockAlert("", "", "Click me after stopped recording in OBS")
+    hs.dialog.blockAlert("", "",
+                         "Click me after having stopped recording in OBS")
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
 
@@ -255,7 +259,7 @@ function recording.modal:exited()
     local projectFileHandle = io.open(projectFile, "w")
     projectFileHandle:write(template)
     projectFileHandle:close()
-    hs.execute([[rm "]] .. projectsDirectory .. [["/events.json]])
+    hs.execute([[mv ~/Videos/events.json ~/.Trash]])
 
     hs.execute([[cp "]] .. templateDirectory .. [["/rounded-corners.png "]] ..
                    projectDirectory .. [["]])
@@ -267,7 +271,6 @@ function recording.modal:exited()
 end
 recording.camera = {}
 function recording.camera.start()
-    recording.events.camera = {}
     hs.application.open("EOS Utility 3")
     hs.dialog.blockAlert("", "",
                          "Click me when your next click will be to start recording in the camera")
@@ -281,7 +284,7 @@ function recording.camera.start()
         eventTap:stop()
     end):start()
     hs.dialog.blockAlert("", "",
-                         "Click me after started recording in the camera")
+                         "Click me after having started recording in the camera")
 end
 function recording.camera.stop()
     hs.application.open("EOS Utility 3")
@@ -297,7 +300,7 @@ function recording.camera.stop()
         eventTap:stop()
     end):start()
     hs.dialog.blockAlert("", "",
-                         "Click me after stopped recording in the camera")
+                         "Click me after having stopped recording in the camera")
 end
 -- hs.hotkey.bind(mods, "V", function()
 --     if not recording.isRecording then return end
