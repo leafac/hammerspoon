@@ -160,7 +160,7 @@ function recording.modal:entered()
     -- recording.cameraOverlay.restart()
 end
 recording.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("", "",
+    local option = hs.dialog.blockAlert("Stop the camera", "",
                                         "Click me right as you restart camera",
                                         "Stop Recording")
     if option == "Click me right as you restart camera" then
@@ -178,10 +178,7 @@ function recording.modal:exited()
     -- recording.cameraOverlay.canvas:delete()
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", [[
-1. Stop camera.
-2. Stop recording in OBS.
-]])
+    hs.dialog.blockAlert("", [[“Stop Recording”]])
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
