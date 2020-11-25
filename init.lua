@@ -129,11 +129,13 @@ function recording.modal:entered()
                           function(event)
         recording.events.start = hs.timer.secondsSinceEpoch()
         hs.alert("“Start Recording” captured")
-        hs.application.open("OBS"):mainWindow():minimize()
         tap:stop()
     end):start()
     hs.dialog.blockAlert("", "", "Click me right as you start the camera")
-    recording.events.camera = {start = hs.timer.secondsSinceEpoch(), stop = nil}
+    hs.application.open("OBS"):mainWindow():minimize()
+    recording.events.camera = {
+        {start = hs.timer.secondsSinceEpoch(), stop = nil}
+    }
     hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
 
     -- local frame = {w = 1280, h = 720}
@@ -254,7 +256,7 @@ function recording.modal:exited()
 >
 ]])
         project = string.gsub(project, ">%s*$", [[
-MARKER 0 ]] .. event.start .. [[ ""
+MARKER 0 ]] .. event.start - recording.events.start .. [[ ""
 %0
 ]])
     end
