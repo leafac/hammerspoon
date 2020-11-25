@@ -192,7 +192,8 @@ function recording.modal:exited()
     -- recording.cameraOverlay.canvas:delete()
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", [[“Stop Recording”]])
+    hs.dialog.blockAlert("",
+                         [[Click me after having clicked on “Stop Recording”]])
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
