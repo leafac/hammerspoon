@@ -217,7 +217,7 @@ function recording.stop()
 
     hs.application.open("OBS")
     hs.dialog.blockAlert("", "",
-                         "Click me when your next click will be to Stop Recording” in OBS")
+                         "Click me when your next click will be to “Stop Recording” in OBS")
     local stopTap
     stopTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
                               function(event)
@@ -280,7 +280,9 @@ function recording.stop()
         template = string.gsub(template, "NAME Camera", [[%0
 <ITEM
   POSITION ]] .. event.start - recording.events.start .. [[
+
   LENGTH ]] .. event.stop - event.start .. [[
+
   <SOURCE VIDEO
     FILE "camera--]] .. index .. [[.mp4"
   >
