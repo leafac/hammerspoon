@@ -8,7 +8,10 @@ hs.hotkey.bind(mods, "return", function() hs.reload() end)
 hs.hotkey
     .bind(mods, ",", function() hs.execute("code ~/.hammerspoon", true) end)
 hs.hotkey.bind(mods, "space", function() hs.toggleConsole() end)
-hs.hotkey.bind(mods, "escape", function() hs.osascript.applescript("beep") end)
+hs.hotkey.bind(mods, "escape", function()
+    hs.osascript.applescript("beep")
+    hs.sound.getByName("Submarine"):play()
+end)
 
 hs.hotkey.bind(mods, "W", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 2 / 2, h = 1 / 2})
@@ -320,19 +323,13 @@ globalScreenRoundedCornersWatcherToPreventGarbageCollection =
 
 local screenBrightnessHack = {canvases = {}}
 hs.hotkey.bind(mods, "up", function()
-    hs.fnutils.each(screenBrightnessHack.canvases, function(canvas)
-        local newAlpha = math.max(0, canvas[1].fillColor.alpha - 0.1)
-        hs.alert(
-            "Brightness hack: " .. math.floor((1 - newAlpha) * 100 + 0.5) .. "%")
-        canvas[1].fillColor.alpha = newAlpha
+    screenBrightnessHack.change(function(alpha)
+        return math.max(0, alpha - 0.1)
     end)
 end)
 hs.hotkey.bind(mods, "down", function()
-    hs.fnutils.each(screenBrightnessHack.canvases, function(canvas)
-        local newAlpha = math.min(1, canvas[1].fillColor.alpha + 0.1)
-        hs.alert(
-            "Brightness hack: " .. math.floor((1 - newAlpha) * 100 + 0.5) .. "%")
-        canvas[1].fillColor.alpha = newAlpha
+    screenBrightnessHack.change(function(alpha)
+        return math.min(1, alpha + 0.1)
     end)
 end)
 function screenBrightnessHack.start()
@@ -346,6 +343,15 @@ function screenBrightnessHack.start()
                 action = "fill",
                 fillColor = {alpha = 0}
             }):behavior({"canJoinAllSpaces", "stationary"}):show()
+    end)
+end
+function screenBrightnessHack.change(alphaChanger)
+    local newAlpha = alphaChanger(screenBrightnessHack.canvases[1][1].fillColor
+                                      .alpha)
+    hs.fnutils.each(screenBrightnessHack.canvases, function(canvas)
+        hs.alert(
+            "Brightness hack: " .. math.floor((1 - newAlpha) * 100 + 0.5) .. "%")
+        canvas[1].fillColor.alpha = newAlpha
     end)
 end
 screenBrightnessHack.start()
