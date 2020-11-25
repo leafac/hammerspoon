@@ -89,33 +89,22 @@ hs.hotkey.bind(mods, "B", function()
 end)
 
 local recording = {
-    isRecording = false,
+    modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
     usbWatcher = nil,
-    events = {start = nil, stop = nil, camera = nil},
-    cameraOverlay = {canvas = nil, timer = nil}
+    events = {start = nil, stop = nil, camera = nil}
+    -- cameraOverlay = {canvas = nil, timer = nil}
 }
-hs.hotkey.bind({"⌘", "⇧"}, "2", function()
-    if not recording.isRecording then
-        recording.start()
-    else
-        recording.stop()
-    end
-    recording.isRecording = not recording.isRecording
-end)
-hs.hotkey.bind(mods, "V", function()
-    if not recording.isRecording then return end
-    local canvas = recording.cameraOverlay.canvas
-    if canvas:isShowing() then
-        canvas:hide()
-    else
-        canvas:show()
+recording.modal:bind({"⌘", "⇧"}, "2", function()
+    local option = hs.dialog.blockAlert("", "", "Restart Camera",
+                                        "Stop Recording")
+    if option == "Restart Camera" then
+        recording.camera.stop()
+        recording.camera.start()
+    elseif option == "Stop Recording" then
+        recording.modal:exit()
     end
 end)
-hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
-    if not recording.isRecording then return end
-    recording.cameraOverlay.restart()
-end)
-function recording.start()
+function recording.modal:entered()
     hs.dialog.blockAlert("", [[
 1. Prepare recording space:
 • Doors.
@@ -155,65 +144,38 @@ function recording.start()
     end):start()
     hs.dialog.blockAlert("", "", "Click me after started recording in OBS")
 
-    recording.events.camera = {}
-    hs.application.open("EOS Utility 3")
-    hs.dialog.blockAlert("", "",
-                         "Click me when your next click will be to start recording in the camera")
-    local cameraStartTap
-    cameraStartTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
-                                     function(event)
-        table.insert(recording.events.camera,
-                     {start = hs.timer.secondsSinceEpoch(), stop = nil})
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
-        hs.alert("Started recording in the camera")
-        cameraStartTap:stop()
-    end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after started recording in the camera")
+    recording.camera.start()
 
-    local frame = {w = 1280, h = 720}
-    local padding = 3
-    recording.cameraOverlay.canvas = hs.canvas.new(
-                                         {
-            x = frame.w * 3 / 4,
-            y = frame.h * 0 / 4,
-            w = frame.w * 1 / 4,
-            h = frame.h * 1 / 4
-        }):appendElements({
-        type = "rectangle",
-        action = "fill",
-        frame = {
-            x = padding,
-            y = padding,
-            w = frame.w * 1 / 4 - padding * 2,
-            h = frame.h * 1 / 4 - padding * 2
-        },
-        fillColor = {alpha = 0.5},
-        roundedRectRadii = {
-            xRadius = roundedCornerRadius,
-            yRadius = roundedCornerRadius
-        }
-    }):behavior({"canJoinAllSpaces", "stationary"}):show()
-    recording.cameraOverlay.restart()
+    -- local frame = {w = 1280, h = 720}
+    -- local padding = 3
+    -- recording.cameraOverlay.canvas = hs.canvas.new(
+    --                                      {
+    --         x = frame.w * 3 / 4,
+    --         y = frame.h * 0 / 4,
+    --         w = frame.w * 1 / 4,
+    --         h = frame.h * 1 / 4
+    --     }):appendElements({
+    --     type = "rectangle",
+    --     action = "fill",
+    --     frame = {
+    --         x = padding,
+    --         y = padding,
+    --         w = frame.w * 1 / 4 - padding * 2,
+    --         h = frame.h * 1 / 4 - padding * 2
+    --     },
+    --     fillColor = {alpha = 0.5},
+    --     roundedRectRadii = {
+    --         xRadius = roundedCornerRadius,
+    --         yRadius = roundedCornerRadius
+    --     }
+    -- }):behavior({"canJoinAllSpaces", "stationary"}):show()
+    -- recording.cameraOverlay.restart()
 end
-function recording.stop()
-    recording.cameraOverlay.timer:stop()
-    recording.cameraOverlay.canvas:delete()
+function recording.modal:exited()
+    -- recording.cameraOverlay.timer:stop()
+    -- recording.cameraOverlay.canvas:delete()
 
-    hs.application.open("EOS Utility 3")
-    hs.dialog.blockAlert("", "",
-                         "Click me when your next click will be to stop recording in the camera")
-    local cameraStopTap
-    cameraStopTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
-                                    function(event)
-        recording.events.camera[#recording.events.camera].stop =
-            hs.timer.secondsSinceEpoch()
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
-        hs.alert("Stopped recording in the camera")
-        cameraStopTap:stop()
-    end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after stopped recording in the camera")
+    recording.camera.stop()
 
     hs.application.open("OBS")
     hs.dialog.blockAlert("", "",
@@ -303,23 +265,70 @@ function recording.stop()
 
     hs.execute([[open ]] .. projectFile)
 end
-function recording.cameraOverlay.restart()
-    hs.dialog.blockAlert("", [[
-1. Microphone.
-2. Computer audio.
-3. OBS.
-4. Camera.
-5. CLAP!
-]])
-    if recording.cameraOverlay.timer then
-        recording.cameraOverlay.timer:stop()
-    end
-    recording.cameraOverlay.canvas[1].fillColor.red = 0
-    recording.cameraOverlay.timer = hs.timer.doAfter(hs.timer.minutes(27),
-                                                     function()
-        recording.cameraOverlay.canvas[1].fillColor.red = 1
-    end)
+recording.camera = {}
+function recording.camera.start()
+    recording.events.camera = {}
+    hs.application.open("EOS Utility 3")
+    hs.dialog.blockAlert("", "",
+                         "Click me when your next click will be to start recording in the camera")
+    local eventTap
+    eventTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
+                               function(event)
+        table.insert(recording.events.camera,
+                     {start = hs.timer.secondsSinceEpoch(), stop = nil})
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+        hs.alert("Started recording in the camera")
+        eventTap:stop()
+    end):start()
+    hs.dialog.blockAlert("", "",
+                         "Click me after started recording in the camera")
 end
+function recording.camera.stop()
+    hs.application.open("EOS Utility 3")
+    hs.dialog.blockAlert("", "",
+                         "Click me when your next click will be to stop recording in the camera")
+    local eventTap
+    eventTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
+                               function(event)
+        recording.events.camera[#recording.events.camera].stop =
+            hs.timer.secondsSinceEpoch()
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+        hs.alert("Stopped recording in the camera")
+        eventTap:stop()
+    end):start()
+    hs.dialog.blockAlert("", "",
+                         "Click me after stopped recording in the camera")
+end
+-- hs.hotkey.bind(mods, "V", function()
+--     if not recording.isRecording then return end
+--     local canvas = recording.cameraOverlay.canvas
+--     if canvas:isShowing() then
+--         canvas:hide()
+--     else
+--         canvas:show()
+--     end
+-- end)
+-- hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
+--     if not recording.isRecording then return end
+--     recording.cameraOverlay.restart()
+-- end)
+-- function recording.cameraOverlay.restart()
+--     hs.dialog.blockAlert("", [[
+-- 1. Microphone.
+-- 2. Computer audio.
+-- 3. OBS.
+-- 4. Camera.
+-- 5. CLAP!
+-- ]])
+--     if recording.cameraOverlay.timer then
+--         recording.cameraOverlay.timer:stop()
+--     end
+--     recording.cameraOverlay.canvas[1].fillColor.red = 0
+--     recording.cameraOverlay.timer = hs.timer.doAfter(hs.timer.minutes(27),
+--                                                      function()
+--         recording.cameraOverlay.canvas[1].fillColor.red = 1
+--     end)
+-- end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
                         function() hs.application.open("Calendar") end)
