@@ -351,5 +351,12 @@ function screenBrightnessHack.update()
     end)
 end
 
--- defaults -currentHost write -g AppleFontSmoothing -int 0 (https://tonsky.me/blog/monitors/)
--- sudo rm -rf $(xcode-select -print-path) && sudo rm -rf /Library/Developer/CommandLineTools && sudo xcode-select --reset && xcode-select --install (https://github.com/nodejs/node-gyp/blob/master/macOS_Catalina.md#i-did-all-that-and-the-acid-test-still-does-not-pass--)
+hs.hotkey.bind(mods, "P", function()
+    hs.dialog.blockAlert("", [[
+Font smoothing in Big Sur (https://tonsky.me/blog/monitors/):
+$ defaults -currentHost write -g AppleFontSmoothing -int 0
+
+Reinstall Command Line Tools (https://github.com/nodejs/node-gyp/blob/master/macOS_Catalina.md#i-did-all-that-and-the-acid-test-still-does-not-pass--):
+$ sudo rm -rf $(xcode-select -print-path) && sudo rm -rf /Library/Developer/CommandLineTools && sudo xcode-select --reset && xcode-select --install
+]])
+end)
