@@ -132,7 +132,7 @@ function recording.modal:entered()
     end):start()
     hs.dialog.blockAlert("", "", "Click me right as you start the camera")
     recording.events.camera = {hs.timer.secondsSinceEpoch()}
-    hs.json.write(recording.events, "~/Videos/events.json", true, true)
+    hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
 
     -- local frame = {w = 1280, h = 720}
     -- local padding = 3
@@ -165,14 +165,14 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
                                         "Stop Recording")
     if option == "Click me right as you restart camera" then
         table.insert(recording.events.camera, hs.timer.secondsSinceEpoch())
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+        hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
     elseif option == "Stop Recording" then
         recording.modal:exit()
     end
 end)
 function recording.modal:exited()
     recording.events.stop = hs.timer.secondsSinceEpoch()
-    hs.json.write(recording.events, "~/Videos/events.json", true, true)
+    hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
 
     -- recording.cameraOverlay.timer:stop()
     -- recording.cameraOverlay.canvas:delete()
@@ -246,7 +246,7 @@ function recording.modal:exited()
     local projectFileHandle = io.open(projectFile, "w")
     projectFileHandle:write(template)
     projectFileHandle:close()
-    hs.execute([[mv ~/Videos/events.json ~/.Trash]])
+    hs.execute([[mv ~/Videos/events-backup.json ~/.Trash]])
 
     hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
