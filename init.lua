@@ -106,7 +106,6 @@ function recording.modal:entered()
 5. Camera.
 6. Headphones.
 ]])
-
     recording.usbWatcher = hs.usb.watcher.new(
                                function(event)
             hs.dialog.blockAlert("", hs.json.encode(event, true))
@@ -173,6 +172,12 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
     elseif option == "Stop Recording" then
         recording.modal:exit()
     end
+end)
+recording.modal:bind(mods, "return", function()
+    local option = hs.dialog.blockAlert(
+                       "Currently recording, do you really want to reload Hammerspoon configuration?",
+                       "", "No", "Yes")
+    if option == "Yes" then hs.reload() end
 end)
 function recording.modal:exited()
     recording.events.stop = hs.timer.secondsSinceEpoch()
