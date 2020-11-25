@@ -165,7 +165,8 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
                                         "Stop Recording")
     if option == "Click me right as you restart camera" then
         table.insert(recording.events.camera, hs.timer.secondsSinceEpoch())
-        hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
+        hs.json.write(recording.events, "~/Videos/events-backup.json", true,
+                      true)
     elseif option == "Stop Recording" then
         recording.modal:exit()
     end
