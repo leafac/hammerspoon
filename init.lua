@@ -140,8 +140,11 @@ function recording.start()
     hs.screen.primaryScreen():setMode(1280, 720, 2)
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", "",
-                         "Click me when your next click will be to “Start Recording” in OBS")
+    hs.dialog.blockAlert("", [[
+1. Microphone.
+2. Computer audio.
+3. Screen.
+]], "Click me when your next click will be to “Start Recording” in OBS")
     local startTap
     startTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
                                function(event)
@@ -237,37 +240,61 @@ function recording.stop()
                                                             "Cancel")
     if projectOption == "Cancel" then return end
 
-    local projectDirectory = [[~/Videos/"]] .. projectName .. [["]]
-    hs.execute([[mkdir ]] .. projectDirectory)
+    local projectsDirectory = hs.fs.pathToAbsolute("~/Videos")
+    local projectDirectory = projectsDirectory .. "/" .. projectName
+    hs.execute([[mkdir "]] .. projectDirectory .. [["]])
 
-    local recordingFile = [["]] ..
-                              string.gsub(
-                                  hs.execute([[ls ~/Videos/*.mkv | tail -n 1]]),
-                                  "%s*$", "") .. [["]]
-    hs.execute([[~/Videos/TEMPLATE/ffmpeg -i ]] .. recordingFile ..
-                   [[ -map 0:0 -c copy ]] .. projectDirectory ..
-                   [[/computer.mp4 -map 0:1 -c copy ]] .. projectDirectory ..
-                   [[/microphone.aac -map 0:2 -c copy ]] .. projectDirectory ..
-                   [[/computer.aac && mv ]] .. recordingFile .. [[ ~/.Trash]])
+    local recordingFile = string.gsub(hs.execute(
+                                          [[ls "]] .. projectsDirectory ..
+                                              [["/*.mkv | tail -n 1]]), "%s*$",
+                                      "")
+    hs.execute([[~/Videos/TEMPLATE/ffmpeg -i "]] .. recordingFile ..
+                   [[" -map 0:0 -c copy "]] .. projectDirectory ..
+                   [["/computer.mp4 -map 0:1 -c copy "]] .. projectDirectory ..
+                   [["/microphone.aac -map 0:2 -c copy "]] .. projectDirectory ..
+                   [["/computer.aac && mv "]] .. recordingFile .. [[" ~/.Trash]])
 
     hs.dialog.blockAlert("", "",
                          "Click me when the recordings from the camera have been transferred to the computer")
     local cameraRecordings = hs.fnutils.split(
                                  string.gsub(
                                      hs.execute(
-                                         [[ls ~/Videos/MVI_*.MP4 | tail -n ]] ..
+                                         [[ls "]] .. projectsDirectory ..
+                                             [["/MVI_*.MP4 | tail -n ]] ..
                                              #recording.events.camera), "%s*$",
                                      ""), "\n")
     for index, cameraRecording in ipairs(cameraRecordings) do
-        hs.execute([[mv ]] .. cameraRecording .. [[ ]] .. projectDirectory ..
-                       [[/camera--]] .. index .. [[.mp4]])
+        hs.execute([[mv "]] .. cameraRecording .. [[" "]] .. projectDirectory ..
+                       [["/camera--]] .. index .. [[.mp4]])
     end
 
-    local projectFile = projectDirectory .. [[/"]] .. projectName .. [[".RPP]]
-    hs.execute([[cp ~/Videos/TEMPLATE/TEMPLATE.RPP ]] .. projectFile)
-    -- hs.execute([[rm ~/Videos/events.json]])
+    local templateDirectory = projectsDirectory .. "/TEMPLATE"
+    local templateFileHandle =
+        io.open(templateDirectory .. "/TEMPLATE.RPP", "r")
+    local template = templateFileHandle:read("*all")
+    templateFileHandle:close()
+    template = string.gsub(template, "LENGTH 5", "LENGTH " ..
+                               recording.events.stop - recording.events.start)
+    for index = 1, #recording.events.camera do
+        local event = recording.events.camera[index]
+        template = string.gsub(template, "NAME Camera", [[%0
+<ITEM
+  POSITION ]] .. event.start - recording.events.start .. [[
+  LENGTH ]] .. event.stop - event.start .. [[
+  <SOURCE VIDEO
+    FILE "camera--]] .. index .. [[.mp4"
+  >
+>
+]])
+    end
+    local projectFile = projectDirectory .. [[/]] .. projectName .. [[.RPP]]
+    local projectFileHandle = io.open(projectFile, "w")
+    projectFileHandle:write(template)
+    projectFileHandle:close()
+    hs.execute([[rm "]] .. projectsDirectory .. [["/events.json]])
 
-    hs.execute([[cp ~/Videos/TEMPLATE/rounded-corners.png ]] .. projectDirectory)
+    hs.execute([[cp "]] .. templateDirectory .. [["/rounded-corners.png "]] ..
+                   projectDirectory .. [["]])
 
     hs.application.get("EOS Utility 3"):kill()
     hs.application.get("OBS"):kill()
