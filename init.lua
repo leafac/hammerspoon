@@ -258,7 +258,7 @@ MARKER 0 ]] .. event.start .. [[ ""
 %0
 ]])
     end
-    local projectFile = projectDirectory .. [[/]] .. projectName .. [[.RPP]]
+    local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
     local projectFileHandle = io.open(projectFile, "w")
     projectFileHandle:write(project)
     projectFileHandle:close()
