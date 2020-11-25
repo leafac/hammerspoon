@@ -91,6 +91,7 @@ end)
 local recording = {
     isRecording = false,
     usbWatcher = nil,
+    events = {start = nil, stop = nil, camera = nil},
     cameraOverlay = {canvas = nil, timer = nil}
 }
 hs.hotkey.bind({"⌘", "⇧"}, "2", function()
@@ -115,19 +116,57 @@ hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
     recording.cameraOverlay.restart()
 end)
 function recording.start()
+    hs.dialog.blockAlert("", [[
+1. Prepare recording space:
+• Doors.
+• Lights.
+• Windows.
+2. Connect recording devices:
+• Audio interface.
+• Camera.
+• Headphones.
+]])
+
+    recording.usbWatcher = hs.usb.watcher.new(
+                               function(event)
+            hs.dialog.blockAlert("", hs.json.encode(event, true))
+        end):start()
+
     local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
     builtInOutput:setOutputMuted(false)
     builtInOutput:setOutputVolume(15)
     hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
 
-    recording.usbWatcher = hs.usb.watcher.new(
-                               function(event)
-            hs.dialog.blockAlert("", hs.inspect(event))
-        end):start()
-
     hs.screen.primaryScreen():setMode(1280, 720, 2)
 
     hs.application.open("OBS")
+    hs.dialog.blockAlert("", "",
+                         "Click me when your next click will be to “Start Recording” in OBS")
+    local startTap
+    startTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
+                               function(event)
+        recording.events.start = hs.timer.secondsSinceEpoch()
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+        hs.alert("Started recording in OBS")
+        startTap:stop()
+    end):start()
+    hs.dialog.blockAlert("", "", "Click me after started recording in OBS")
+
+    recording.events.camera = {}
+    hs.application.open("EOS Utility 3")
+    hs.dialog.blockAlert("", "",
+                         "Click me when your next click will be to start recording in the camera")
+    local cameraStartTap
+    cameraStartTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
+                                     function(event)
+        table.insert(recording.events.camera,
+                     {start = hs.timer.secondsSinceEpoch(), stop = nil})
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+        hs.alert("Started recording in the camera")
+        cameraStartTap:stop()
+    end):start()
+    hs.dialog.blockAlert("", "",
+                         "Click me after started recording in the camera")
 
     local frame = {w = 1280, h = 720}
     local padding = 3
@@ -158,38 +197,82 @@ function recording.stop()
     recording.cameraOverlay.timer:stop()
     recording.cameraOverlay.canvas:delete()
 
-    hs.application.get("OBS"):kill()
+    hs.application.open("EOS Utility 3")
+    hs.dialog.blockAlert("", "",
+                         "Click me when your next click will be to stop recording in the camera")
+    local cameraStopTap
+    cameraStopTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
+                                    function(event)
+        recording.events.camera[#recording.events.camera].stop =
+            hs.timer.secondsSinceEpoch()
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+        hs.alert("Stopped recording in the camera")
+        cameraStopTap:stop()
+    end):start()
+    hs.dialog.blockAlert("", "",
+                         "Click me after stopped recording in the camera")
+
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("", "",
+                         "Click me when your next click will be to Stop Recording” in OBS")
+    local stopTap
+    stopTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
+                              function(event)
+        recording.events.stop = hs.timer.secondsSinceEpoch()
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+        hs.alert("Stopped recording in OBS")
+        stopTap:stop()
+    end):start()
+    hs.dialog.blockAlert("", "", "Click me after stopped recording in OBS")
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
 
-    recording.usbWatcher:stop()
-
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
+
+    recording.usbWatcher:stop()
 
     local projectOption, projectName = hs.dialog.textPrompt("Project name:", "",
                                                             "",
                                                             "Create Project",
                                                             "Cancel")
-    if projectOption ~= "Cancel" then
-        local projectDirectory = [[~/Videos/"]] .. projectName .. [["]]
-        local projectFile = projectDirectory .. [[/"]] .. projectName ..
-                                [[".RPP]]
-        local recordingFile = [["]] ..
-                                  string.gsub(
-                                      hs.execute(
-                                          [[ls ~/Videos/*.mkv | tail -n 1]]),
-                                      "%s*$", "") .. [["]]
-        hs.execute([[mkdir ]] .. projectDirectory ..
-                       [[ && cp ~/Videos/TEMPLATE/TEMPLATE.RPP ]] .. projectFile ..
-                       [[ && cp ~/Videos/TEMPLATE/rounded-corners.png ]] ..
-                       projectDirectory .. [[ && ~/Videos/TEMPLATE/ffmpeg -i ]] ..
-                       recordingFile .. [[ -map 0:0 -c copy ]] ..
-                       projectDirectory .. [[/computer.mp4 -map 0:1 -c copy ]] ..
-                       projectDirectory .. [[/microphone.aac -map 0:2 -c copy ]] ..
-                       projectDirectory .. [[/computer.aac && mv ]] ..
-                       recordingFile .. [[ ~/.Trash && open ]] .. projectFile ..
-                       [[ && open ]] .. projectDirectory)
+    if projectOption == "Cancel" then return end
+
+    local projectDirectory = [[~/Videos/"]] .. projectName .. [["]]
+    hs.execute([[mkdir ]] .. projectDirectory)
+
+    local recordingFile = [["]] ..
+                              string.gsub(
+                                  hs.execute([[ls ~/Videos/*.mkv | tail -n 1]]),
+                                  "%s*$", "") .. [["]]
+    hs.execute([[~/Videos/TEMPLATE/ffmpeg -i ]] .. recordingFile ..
+                   [[ -map 0:0 -c copy ]] .. projectDirectory ..
+                   [[/computer.mp4 -map 0:1 -c copy ]] .. projectDirectory ..
+                   [[/microphone.aac -map 0:2 -c copy ]] .. projectDirectory ..
+                   [[/computer.aac && mv ]] .. recordingFile .. [[ ~/.Trash]])
+
+    hs.dialog.blockAlert("", "",
+                         "Click me when the recordings from the camera have been transferred to the computer")
+    local cameraRecordings = hs.fnutils.split(
+                                 string.gsub(
+                                     hs.execute(
+                                         [[ls ~/Videos/MVI_*.MP4 | tail -n ]] ..
+                                             #recording.events.camera), "%s*$",
+                                     ""), "\n")
+    for index, cameraRecording in ipairs(cameraRecordings) do
+        hs.execute([[mv ]] .. cameraRecording .. [[ ]] .. projectDirectory ..
+                       [[/camera--]] .. index .. [[.mp4]])
     end
+
+    local projectFile = projectDirectory .. [[/"]] .. projectName .. [[".RPP]]
+    hs.execute([[cp ~/Videos/TEMPLATE/TEMPLATE.RPP ]] .. projectFile)
+    -- hs.execute([[rm ~/Videos/events.json]])
+
+    hs.execute([[cp ~/Videos/TEMPLATE/rounded-corners.png ]] .. projectDirectory)
+
+    hs.application.get("EOS Utility 3"):kill()
+    hs.application.get("OBS"):kill()
+
+    hs.execute([[open ]] .. projectFile)
 end
 function recording.cameraOverlay.restart()
     hs.dialog.blockAlert("", [[
