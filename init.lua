@@ -94,17 +94,6 @@ local recording = {
     events = {start = nil, stop = nil, camera = nil}
     -- cameraOverlay = {canvas = nil, timer = nil}
 }
-recording.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("", "",
-                                        "Click me right as you restart camera",
-                                        "Stop Recording")
-    if option == "Click me right as you restart camera" then
-        table.insert(recording.events.camera, hs.timer.secondsSinceEpoch())
-        hs.json.write(recording.events, "~/Videos/events.json", true, true)
-    elseif option == "Stop Recording" then
-        recording.modal:exit()
-    end
-end)
 function recording.modal:entered()
     hs.dialog.blockAlert("", [[
 1. Doors.
@@ -138,10 +127,10 @@ function recording.modal:entered()
                           function(event)
         recording.events.start = hs.timer.secondsSinceEpoch()
         hs.alert("“Start Recording” captured")
+        hs.application.open("OBS"):mainWindow():minimize()
         tap:stop()
     end):start()
     hs.dialog.blockAlert("", "", "Click me right as you start the camera")
-    hs.application.open("OBS"):mainWindow():minimize()
     recording.events.camera = {hs.timer.secondsSinceEpoch()}
     hs.json.write(recording.events, "~/Videos/events.json", true, true)
 
@@ -170,6 +159,17 @@ function recording.modal:entered()
     -- }):behavior({"canJoinAllSpaces", "stationary"}):show()
     -- recording.cameraOverlay.restart()
 end
+recording.modal:bind({"⌘", "⇧"}, "2", function()
+    local option = hs.dialog.blockAlert("", "",
+                                        "Click me right as you restart camera",
+                                        "Stop Recording")
+    if option == "Click me right as you restart camera" then
+        table.insert(recording.events.camera, hs.timer.secondsSinceEpoch())
+        hs.json.write(recording.events, "~/Videos/events.json", true, true)
+    elseif option == "Stop Recording" then
+        recording.modal:exit()
+    end
+end)
 function recording.modal:exited()
     recording.events.stop = hs.timer.secondsSinceEpoch()
     hs.json.write(recording.events, "~/Videos/events.json", true, true)
@@ -182,7 +182,7 @@ function recording.modal:exited()
 1. Stop camera.
 2. Stop recording in OBS.
 ]])
-    hs.application.get("OBS"):kill()
+    hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
 
