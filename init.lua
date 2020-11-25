@@ -321,18 +321,21 @@ screenRoundedCorners.start()
 globalScreenRoundedCornersWatcherToPreventGarbageCollection =
     hs.screen.watcher.new(function() screenRoundedCorners.start() end):start()
 
-local screenBrightnessHack = {canvases = {}}
+local screenBrightnessHack = {brightness = 100, canvases = {}}
 hs.hotkey.bind(mods, "up", function()
-    screenBrightnessHack.change(function(alpha)
-        return math.max(0, alpha - 0.1)
-    end)
+    screenBrightnessHack.brightness = math.min(100,
+                                               screenBrightnessHack.brightness +
+                                                   10)
+    screenBrightnessHack.update()
 end)
 hs.hotkey.bind(mods, "down", function()
-    screenBrightnessHack.change(function(alpha)
-        return math.min(1, alpha + 0.1)
-    end)
+    screenBrightnessHack.brightness = math.max(0,
+                                               screenBrightnessHack.brightness -
+                                                   10)
+    screenBrightnessHack.update()
 end)
-function screenBrightnessHack.start()
+function screenBrightnessHack.update()
+    hs.alert("Brightness hack: " .. screenBrightnessHack.brightness)
     hs.fnutils.each(screenBrightnessHack.canvases,
                     function(canvas) canvas:delete() end)
     screenBrightnessHack.canvases = hs.fnutils.map(hs.screen.allScreens(),
@@ -341,22 +344,12 @@ function screenBrightnessHack.start()
                    {
                 type = "rectangle",
                 action = "fill",
-                fillColor = {alpha = 0}
+                fillColor = {
+                    alpha = (100 - screenBrightnessHack.brightness) / 100
+                }
             }):behavior({"canJoinAllSpaces", "stationary"}):show()
     end)
 end
-function screenBrightnessHack.change(alphaChanger)
-    local newAlpha = alphaChanger(screenBrightnessHack.canvases[1][1].fillColor
-                                      .alpha)
-    hs.fnutils.each(screenBrightnessHack.canvases, function(canvas)
-        hs.alert(
-            "Brightness hack: " .. math.floor((1 - newAlpha) * 100 + 0.5) .. "%")
-        canvas[1].fillColor.alpha = newAlpha
-    end)
-end
-screenBrightnessHack.start()
-globalScreenBrightnessHackWatcherToPreventGarbageCollection =
-    hs.screen.watcher.new(function() screenBrightnessHack.start() end):start()
 
 -- defaults -currentHost write -g AppleFontSmoothing -int 0 (https://tonsky.me/blog/monitors/)
 -- sudo rm -rf $(xcode-select -print-path) && sudo rm -rf /Library/Developer/CommandLineTools && sudo xcode-select --reset && xcode-select --install (https://github.com/nodejs/node-gyp/blob/master/macOS_Catalina.md#i-did-all-that-and-the-acid-test-still-does-not-pass--)
