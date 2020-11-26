@@ -167,9 +167,9 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
     recording.events.camera[#recording.events.camera].stop =
         hs.timer.secondsSinceEpoch()
     local option = hs.dialog.blockAlert("Stop the camera", "",
-                                        "Click me right as you restart camera",
+                                        "Click me right as you restart the camera",
                                         "Stop Recording")
-    if option == "Click me right as you restart camera" then
+    if option == "Click me right as you restart the camera" then
         table.insert(recording.events.camera,
                      {start = hs.timer.secondsSinceEpoch(), stop = nil})
         hs.json.write(recording.events, "~/Videos/events-backup.json", true,
@@ -223,7 +223,7 @@ function recording.modal:exited()
                    [[/computer.aac" && mv "]] .. recordingFile .. [[" ~/.Trash]])
 
     hs.dialog.blockAlert("", "",
-                         "Click me when the recordings from the camera have been transferred to the computer")
+                         "Click me after the recordings from the camera have been transferred to the computer")
     local cameraRecordings = hs.fnutils.split(
                                  string.gsub(
                                      hs.execute(
@@ -258,7 +258,7 @@ function recording.modal:exited()
 ]])
         project = string.gsub(project, ">%s*$", [[
 MARKER 0 ]] .. event.start - recording.events.start .. [[ ""
-%0
+>
 ]])
     end
     local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
