@@ -93,19 +93,23 @@ end)
 
 local recording = {
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
-    usbWatcher = nil,
-    events = {start = nil, stop = nil, camera = nil}
+    usbWatcher = nil
     -- cameraOverlay = {canvas = nil, timer = nil}
 }
 function recording.modal:entered()
-    hs.dialog.blockAlert("", [[
-1. Doors.
-2. Lights.
-3. Windows.
-4. Audio interface.
-5. Camera.
-6. Headphones.
-]])
+    local _, projectName = hs.dialog.textPrompt("🚪 🪟 💡 🎧 🎤 🎥",
+                                                "Project Name:", "",
+                                                "Create Project")
+    local projectsDirectory = hs.fs.pathToAbsolute("~/Videos")
+    local projectDirectory = projectsDirectory .. "/" .. projectName
+    local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
+    local templateDirectory = projectsDirectory .. "/TEMPLATE"
+    hs.execute([[mkdir "]] .. projectDirectory .. [["]])
+    hs.execute([[cp "]] .. templateDirectory .. [[/TEMPLATE.RPP" "]] ..
+                   projectFile .. [["]])
+    hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
+                   projectDirectory .. [["]])
+
     recording.usbWatcher = hs.usb.watcher.new(
                                function(event)
             hs.dialog.blockAlert("", hs.json.encode(event, true))
@@ -119,24 +123,15 @@ function recording.modal:entered()
     hs.screen.primaryScreen():setMode(1280, 720, 2)
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("OBS", [[
-1. Microphone.
-2. Computer audio.
-3. Screen.
-]], "Click me when your next click will be to “Start Recording”")
-    local tap
-    tap = hs.eventtap.new({hs.eventtap.event.types.leftMouseDown},
-                          function(event)
-        recording.events.start = hs.timer.secondsSinceEpoch()
-        hs.alert("“Start Recording” captured")
-        tap:stop()
-    end):start()
-    hs.dialog.blockAlert("", "", "Click me right as you start the camera")
-    hs.application.open("OBS"):mainWindow():minimize()
-    recording.events.camera = {
-        {start = hs.timer.secondsSinceEpoch(), stop = nil}
-    }
-    hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
+    hs.open(projectFile)
+    hs.dialog.blockAlert("", [[
+REAPER: 🎤 💻
+OBS: 🎤 💻
+]], "Start Recording")
+    hs.execute("node ~/Videos/TEMPLATE/obs StartRecording", true)
+    hs.http.get("http://localhost:4445/_/1013")
+
+    -- CAMERA
 
     -- local frame = {w = 1280, h = 720}
     -- local padding = 3
@@ -163,9 +158,11 @@ function recording.modal:entered()
     -- }):behavior({"canJoinAllSpaces", "stationary"}):show()
     -- recording.cameraOverlay.restart()
 end
+recording.modal:bind(hs.fnutils.concat({"⌘"}, mods), "space", function()
+    hs.http.get("http://localhost:4445/_/40157")
+    hs.alert("✂️")
+end)
 recording.modal:bind({"⌘", "⇧"}, "2", function()
-    recording.events.camera[#recording.events.camera].stop =
-        hs.timer.secondsSinceEpoch()
     local option = hs.dialog.blockAlert("Stop the camera", "",
                                         "Click me right as you restart the camera",
                                         "Stop Recording")
@@ -185,6 +182,7 @@ recording.modal:bind(mods, "return", function()
     if option == "Yes" then hs.reload() end
 end)
 function recording.modal:exited()
+    -- REAPER STOP 1016
     recording.events.stop = hs.timer.secondsSinceEpoch()
     hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
 
