@@ -5,8 +5,8 @@ local roundedCornerRadius = 10
 hs.window.animationDuration = 0
 
 hs.hotkey.bind(mods, "return", function() hs.reload() end)
-hs.hotkey
-    .bind(mods, ",", function() hs.execute("code ~/.hammerspoon", true) end)
+hs.hotkey.bind(mods, ",",
+               function() hs.execute([[code ~/.hammerspoon]], true) end)
 hs.hotkey.bind(mods, "space", function() hs.toggleConsole() end)
 hs.hotkey.bind(mods, "escape", function()
     hs.osascript.applescript("beep")
@@ -93,7 +93,8 @@ end)
 
 local recording = {
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
-    usbWatcher = nil
+    menubar = {menubar = nil, timer = nil},
+    isCameraRecording = false
     -- cameraOverlay = {canvas = nil, timer = nil}
 }
 function recording.modal:entered()
@@ -110,11 +111,32 @@ function recording.modal:entered()
     hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
 
-    recording.usbWatcher = hs.usb.watcher.new(
-                               function(event)
-            hs.dialog.blockAlert("", hs.json.encode(event, true))
-        end):start()
+    recording.menubar.menubar = hs.menubar.new()
+    recording.menubar.timer = hs.timer.doEvery(10, function()
+        local h5 = "❌"
+        local reaper = "❌"
+        local obs = "❌"
+        local camera = "❌"
+        if hs.audiodevice.findOutputByName("H5") ~= nil then h5 = "🎤" end
+        local reaperStatus, reaperBody =
+            hs.http.get("http://localhost:4445/_/TRANSPORT")
+        if reaperStatus == 200 then
+            local reaperTransportPlayState =
+                hs.fnutils.split(reaperBody, "\t")[2]
+            if reaperTransportPlayState == "5" then reaper = "🔈" end
+        end
+        local obsOutput, obsStatus = hs.execute(
+                                         [[npx obs-cli GetStreamingStatus]],
+                                         true)
+        if obsStatus and hs.json.decode(obsOutput).recording then
+            obs = "💻"
+        end
+        if recording.isCameraRecording then camera = "🎥" end
+        recording.menubar.menubar:setTitle(
+            h5 .. " " .. reaper .. " " .. obs .. " " .. camera)
+    end)
 
+    -- TODO: Remove this and let the volume control be for built-in output by tapping on the inputs from the system keys
     local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
     builtInOutput:setOutputMuted(false)
     builtInOutput:setOutputVolume(15)
@@ -128,7 +150,9 @@ function recording.modal:entered()
 REAPER: 🎤 🔈
 OBS: 🎤 🔈 💻
 ]], "Start Recording")
-    hs.execute("node ~/Videos/TEMPLATE/obs StartRecording", true)
+    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
+                   projectDirectory .. [[\" }']], true)
+    hs.execute([[npx obs-cli StartRecording]], true)
     hs.http.get("http://localhost:4445/_/1013")
 
     -- CAMERA
@@ -182,6 +206,8 @@ recording.modal:bind(mods, "return", function()
     if option == "Yes" then hs.reload() end
 end)
 function recording.modal:exited()
+    recording.menubar.timer:stop()
+    recording.menubar.menubar:delete()
     -- REAPER STOP 1016
     recording.events.stop = hs.timer.secondsSinceEpoch()
     hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
@@ -197,8 +223,6 @@ function recording.modal:exited()
     hs.screen.primaryScreen():setMode(1280, 800, 2)
 
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
-
-    recording.usbWatcher:stop()
 
     local projectOption, projectName = hs.dialog.textPrompt("Project name:", "",
                                                             "",
