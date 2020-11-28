@@ -128,10 +128,10 @@ OBS: 🎤 🔈 💻
     local frame = {w = 1280, h = 720}
     local padding = 3
     recording.scenes.overlays = {
-        ["camera"] = hs.canvas.new({x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
+        camera = hs.canvas.new({x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
             {type = "rectangle", action = "fill", fillColor = {alpha = 0.5}})
             :behavior({"canJoinAllSpaces", "stationary"}),
-        ["picture-in-picture"] = hs.canvas.new(
+        pictureInPicture = hs.canvas.new(
             {x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
             {
                 type = "rectangle",
@@ -147,9 +147,7 @@ OBS: 🎤 🔈 💻
                     xRadius = roundedCornerRadius,
                     yRadius = roundedCornerRadius
                 }
-            }):behavior({"canJoinAllSpaces", "stationary"}),
-        hs.canvas.new({x = 0, y = 0, w = frame.w, h = frame.h}):appendElements()
-            :behavior({"canJoinAllSpaces", "stationary"})
+            }):behavior({"canJoinAllSpaces", "stationary"})
     }
     recording.scenes.switch("camera")
 end
@@ -159,13 +157,13 @@ function recording.menubar.state.camera.start()
     if recording.menubar.state.camera.timer ~= nil then
         recording.menubar.state.camera.timer:stop()
     end
-    if recording.menubar.timer ~= nil and recording.menubar.timer:running() then
-        recording.menubar.timer:fire()
-    end
     recording.menubar.state.camera.timer =
         hs.timer.doAfter(hs.timer.minutes(27), function()
             recording.menubar.state.camera.camera = false
         end)
+    if recording.menubar.timer ~= nil and recording.menubar.timer:running() then
+        recording.menubar.timer:fire()
+    end
 end
 function recording.scenes.switch(identifier)
     recording.scenes.hide()
@@ -178,9 +176,8 @@ function recording.scenes.hide()
 end
 recording.modal:bind(recording.mods, "Z",
                      function() recording.scenes.switch("camera") end)
-recording.modal:bind(recording.mods, "A", function()
-    recording.scenes.switch("picture-in-picture")
-end)
+recording.modal:bind(recording.mods, "A",
+                     function() recording.scenes.switch("pictureInPicture") end)
 recording.modal:bind(recording.mods, "Q",
                      function() recording.scenes.switch("computer") end)
 recording.modal:bind(recording.mods, "S", function()
