@@ -45,53 +45,8 @@ hs.hotkey.bind(mods, "tab", function()
         hs.window.focusedWindow():screen():next())
 end)
 
-hs.hotkey.bind(mods, "R", function()
-    local fullFrame = hs.screen.primaryScreen():fullFrame()
-    hs.window.focusedWindow():move({
-        x = 0 / 4 * fullFrame.w,
-        y = 0 / 4 * fullFrame.h,
-        w = 3 / 4 * fullFrame.w,
-        h = 4 / 4 * fullFrame.h
-    })
-end)
-hs.hotkey.bind(mods, "F", function()
-    local fullFrame = hs.screen.primaryScreen():fullFrame()
-    hs.window.focusedWindow():move({
-        x = 3 / 4 * fullFrame.w,
-        y = 1 / 4 * fullFrame.h,
-        w = 1 / 4 * fullFrame.w,
-        h = 3 / 4 * fullFrame.h
-    })
-end)
-hs.hotkey.bind(mods, "T", function()
-    local fullFrame = hs.screen.primaryScreen():fullFrame()
-    hs.window.focusedWindow():move({
-        x = 3 / 4 * fullFrame.w,
-        y = 1 / 4 * fullFrame.h,
-        w = 1 / 4 * fullFrame.w,
-        h = 1 / 4 * fullFrame.h
-    })
-end)
-hs.hotkey.bind(mods, "G", function()
-    local fullFrame = hs.screen.primaryScreen():fullFrame()
-    hs.window.focusedWindow():move({
-        x = 3 / 4 * fullFrame.w,
-        y = 2 / 4 * fullFrame.h,
-        w = 1 / 4 * fullFrame.w,
-        h = 1 / 4 * fullFrame.h
-    })
-end)
-hs.hotkey.bind(mods, "B", function()
-    local fullFrame = hs.screen.primaryScreen():fullFrame()
-    hs.window.focusedWindow():move({
-        x = 3 / 4 * fullFrame.w,
-        y = 3 / 4 * fullFrame.h,
-        w = 1 / 4 * fullFrame.w,
-        h = 1 / 4 * fullFrame.h
-    })
-end)
-
 local recording = {
+    mods = hs.fnutils.concat({"⌘"}, mods),
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
     menubar = {
         menubar = nil,
@@ -201,9 +156,90 @@ OBS: 🎤 🔈 💻
     -- }):behavior({"canJoinAllSpaces", "stationary"}):show()
     -- recording.cameraOverlay.restart()
 end
-recording.modal:bind(hs.fnutils.concat({"⌘"}, mods), "space", function()
+recording.modal:bind(recording.mods, "A", function()
+    local fullFrame = hs.screen.primaryScreen():fullFrame()
+    hs.window.focusedWindow():move({
+        x = 0 / 4 * fullFrame.w,
+        y = 0 / 4 * fullFrame.h,
+        w = 3 / 4 * fullFrame.w,
+        h = 4 / 4 * fullFrame.h
+    })
+end)
+recording.modal:bind(recording.mods, "S", function()
+    local fullFrame = hs.screen.primaryScreen():fullFrame()
+    hs.window.focusedWindow():move({
+        x = 3 / 4 * fullFrame.w,
+        y = 1 / 4 * fullFrame.h,
+        w = 1 / 4 * fullFrame.w,
+        h = 3 / 4 * fullFrame.h
+    })
+end)
+recording.modal:bind(recording.mods, "E", function()
+    local fullFrame = hs.screen.primaryScreen():fullFrame()
+    hs.window.focusedWindow():move({
+        x = 3 / 4 * fullFrame.w,
+        y = 1 / 4 * fullFrame.h,
+        w = 1 / 4 * fullFrame.w,
+        h = 1 / 4 * fullFrame.h
+    })
+end)
+recording.modal:bind(recording.mods, "D", function()
+    local fullFrame = hs.screen.primaryScreen():fullFrame()
+    hs.window.focusedWindow():move({
+        x = 3 / 4 * fullFrame.w,
+        y = 2 / 4 * fullFrame.h,
+        w = 1 / 4 * fullFrame.w,
+        h = 1 / 4 * fullFrame.h
+    })
+end)
+recording.modal:bind(recording.mods, "C", function()
+    local fullFrame = hs.screen.primaryScreen():fullFrame()
+    hs.window.focusedWindow():move({
+        x = 3 / 4 * fullFrame.w,
+        y = 3 / 4 * fullFrame.h,
+        w = 1 / 4 * fullFrame.w,
+        h = 1 / 4 * fullFrame.h
+    })
+end)
+-- hs.hotkey.bind(mods, "V", function()
+--     if not recording.isRecording then return end
+--     local canvas = recording.cameraOverlay.canvas
+--     if canvas:isShowing() then
+--         canvas:hide()
+--     else
+--         canvas:show()
+--     end
+-- end)
+-- hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
+--     if not recording.isRecording then return end
+--     recording.cameraOverlay.restart()
+-- end)
+-- function recording.cameraOverlay.restart()
+--     hs.dialog.blockAlert("", [[
+-- 1. Microphone.
+-- 2. Computer audio.
+-- 3. OBS.
+-- 4. Camera.
+-- 5. CLAP!
+-- ]])
+--     if recording.cameraOverlay.timer then
+--         recording.cameraOverlay.timer:stop()
+--     end
+--     recording.cameraOverlay.canvas[1].fillColor.red = 0
+--     recording.cameraOverlay.timer = hs.timer.doAfter(hs.timer.minutes(27),
+--                                                      function()
+--         recording.cameraOverlay.canvas[1].fillColor.red = 1
+--     end)
+-- end
+recording.modal:bind(recording.mods, "space", function()
     hs.http.get("http://localhost:4445/_/40157")
     hs.alert("✂️")
+end)
+recording.modal:bind(mods, "return", function()
+    local option = hs.dialog.blockAlert(
+                       "Currently recording, do you really want to reload the Hammerspoon configuration?",
+                       "", "No", "Yes")
+    if option == "Yes" then hs.reload() end
 end)
 recording.modal:bind({"⌘", "⇧"}, "2", function()
     local option = hs.dialog.blockAlert("Stop the camera", "",
@@ -217,12 +253,6 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
     elseif option == "Stop Recording" then
         recording.modal:exit()
     end
-end)
-recording.modal:bind(mods, "return", function()
-    local option = hs.dialog.blockAlert(
-                       "Currently recording, do you really want to reload Hammerspoon configuration?",
-                       "", "No", "Yes")
-    if option == "Yes" then hs.reload() end
 end)
 function recording.modal:exited()
     recording.menubar.timer:stop()
@@ -313,36 +343,6 @@ MARKER 0 ]] .. event.start - recording.events.start .. [[ ""
 
     hs.execute([[open "]] .. projectFile .. [["]])
 end
--- hs.hotkey.bind(mods, "V", function()
---     if not recording.isRecording then return end
---     local canvas = recording.cameraOverlay.canvas
---     if canvas:isShowing() then
---         canvas:hide()
---     else
---         canvas:show()
---     end
--- end)
--- hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
---     if not recording.isRecording then return end
---     recording.cameraOverlay.restart()
--- end)
--- function recording.cameraOverlay.restart()
---     hs.dialog.blockAlert("", [[
--- 1. Microphone.
--- 2. Computer audio.
--- 3. OBS.
--- 4. Camera.
--- 5. CLAP!
--- ]])
---     if recording.cameraOverlay.timer then
---         recording.cameraOverlay.timer:stop()
---     end
---     recording.cameraOverlay.canvas[1].fillColor.red = 0
---     recording.cameraOverlay.timer = hs.timer.doAfter(hs.timer.minutes(27),
---                                                      function()
---         recording.cameraOverlay.canvas[1].fillColor.red = 1
---     end)
--- end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
                         function() hs.application.open("Calendar") end)
