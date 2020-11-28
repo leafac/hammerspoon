@@ -158,7 +158,8 @@ function recording.menubar.state.camera.start()
         recording.menubar.timer:fire()
     end
     recording.menubar.state.camera.timer =
-        hs.timer.doAfter(hs.timer.minutes(27), function()
+        hs.timer.doAfter(10, function()
+            -- TODO: hs.timer.doAfter(hs.timer.minutes(27), function()
             recording.menubar.state.camera.camera = false
         end)
 end
@@ -267,7 +268,7 @@ function recording.modal:exited()
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
                    hs.fs.pathToAbsolute("~/Videos") .. [[\" }']], true)
     hs.application.open("OBS"):kill()
-    hs.open(projectFile)
+    hs.application.open("REAPER")
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
 end
