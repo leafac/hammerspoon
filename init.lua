@@ -377,36 +377,6 @@ screenRoundedCorners.start()
 globalScreenRoundedCornersWatcherToPreventGarbageCollection =
     hs.screen.watcher.new(function() screenRoundedCorners.start() end):start()
 
-local screenBrightnessHack = {brightness = 100, canvases = {}}
-hs.hotkey.bind(mods, "up", function()
-    screenBrightnessHack.brightness = math.min(100,
-                                               screenBrightnessHack.brightness +
-                                                   10)
-    screenBrightnessHack.update()
-end)
-hs.hotkey.bind(mods, "down", function()
-    screenBrightnessHack.brightness = math.max(0,
-                                               screenBrightnessHack.brightness -
-                                                   10)
-    screenBrightnessHack.update()
-end)
-function screenBrightnessHack.update()
-    hs.alert("Brightness hack: " .. screenBrightnessHack.brightness)
-    hs.fnutils.each(screenBrightnessHack.canvases,
-                    function(canvas) canvas:delete() end)
-    screenBrightnessHack.canvases = hs.fnutils.map(hs.screen.allScreens(),
-                                                   function(screen)
-        return hs.canvas.new(screen:fullFrame()):appendElements(
-                   {
-                type = "rectangle",
-                action = "fill",
-                fillColor = {
-                    alpha = (100 - screenBrightnessHack.brightness) / 100
-                }
-            }):behavior({"canJoinAllSpaces", "stationary"}):show()
-    end)
-end
-
 globalVolumeEventTapToPreventGarbageCollection =
     hs.eventtap.new({hs.eventtap.event.types.NSSystemDefined}, function(event)
         local systemKey = event:systemKey()
