@@ -159,13 +159,7 @@ function recording.modal:entered()
             title = recording.menubar.state.heartbeat and "○" or "●"
         end
         recording.menubar.menubar:setTitle(title)
-    end)
-
-    -- TODO: Remove this and let the volume control be for built-in output by tapping on the inputs from the system keys
-    local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
-    builtInOutput:setOutputMuted(false)
-    builtInOutput:setOutputVolume(15)
-    hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
+    end):fire()
 
     hs.screen.primaryScreen():setMode(1280, 720, 2)
 
@@ -355,7 +349,7 @@ local dateAndTime = hs.menubar.new():setClickCallback(
 globalDateAndTimeTimerToPreventGarbageCollection =
     hs.timer.doEvery(1, function()
         dateAndTime:setTitle(os.date("%Y-%m-%d  %H:%M  %A"))
-    end)
+    end):fire()
 
 local screenRoundedCorners = {canvases = {}}
 function screenRoundedCorners.start()
@@ -412,6 +406,42 @@ function screenBrightnessHack.update()
             }):behavior({"canJoinAllSpaces", "stationary"}):show()
     end)
 end
+
+globalVolumeEventTapToPreventGarbageCollection =
+    hs.eventtap.new({hs.eventtap.event.types.NSSystemDefined}, function(event)
+        local systemKey = event:systemKey()
+        if not systemKey.down or next(event:getFlags()) ~= nil then
+            return
+        end
+        local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
+        local maximum = 100
+        local levels = 16
+        local level = math.floor(
+                          builtInOutput:outputVolume() / maximum * levels + 0.5)
+        local muted = builtInOutput:outputMuted()
+        if systemKey.key == "MUTE" then
+            if level == 0 then
+                level = level + 1
+                muted = false
+            else
+                muted = not muted
+            end
+        elseif systemKey.key == "SOUND_DOWN" then
+            level = math.max(0, level - 1)
+            muted = level == 0
+        elseif systemKey.key == "SOUND_UP" then
+            level = math.min(levels, level + 1)
+            muted = level == 0
+        else
+            return
+        end
+        builtInOutput:setOutputVolume(level / levels * maximum)
+        builtInOutput:setOutputMuted(muted)
+        hs.alert((muted and "🔇" or "🔊") .. " " ..
+                     string.rep("⬛︎", level) ..
+                     string.rep("⬜︎", levels - level))
+        return true
+    end):start()
 
 hs.hotkey.bind(mods, "P", function()
     hs.dialog.blockAlert("", [[
