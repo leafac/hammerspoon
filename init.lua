@@ -59,7 +59,7 @@ local recording = {
             camera = {camera = false, timer = nil}
         }
     },
-    overlays = {overlays = nil}
+    scenes = {overlays = nil}
 }
 function recording.modal:entered()
     local _, projectName = hs.dialog.textPrompt("🚪 🪟 💡 🎧 🎤 🎥",
@@ -127,7 +127,7 @@ OBS: 🎤 🔈 💻
 
     local frame = {w = 1280, h = 720}
     local padding = 3
-    recording.overlays.overlays = {
+    recording.scenes.overlays = {
         camera = hs.canvas.new({x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
             {type = "rectangle", action = "fill", fillColor = {alpha = 0.5}})
             :behavior({"canJoinAllSpaces", "stationary"}),
@@ -149,7 +149,7 @@ OBS: 🎤 🔈 💻
                 }
             }):behavior({"canJoinAllSpaces", "stationary"})
     }
-    recording.overlays.switch("camera")
+    recording.scenes.switch("camera")
 end
 function recording.menubar.state.camera.start()
     hs.alert("🟥 🎥 👏")
@@ -165,27 +165,23 @@ function recording.menubar.state.camera.start()
         recording.menubar.timer:fire()
     end
 end
-function recording.overlays.switch(identifier)
-    hs.fnutils.each(recording.overlays.overlays,
+function recording.scenes.switch(identifier)
+    hs.fnutils.each(recording.scenes.overlays,
                     function(overlay) overlay:hide() end)
-    local overlay = recording.overlays.overlays[identifier]
+    local overlay = recording.scenes.overlays[identifier]
     if overlay ~= nil then overlay:show() end
+    hs.http.get("http://localhost:4445/_/" .. ({
+        camera = "_RS026d8dd089fad7ac327569ef25a65290d5a22fbf",
+        pictureInPicture = "_RS29de72e1bca736566608e74b3d7f24635a1b80be",
+        computer = "_RSa9ea17ea125746774f3f682d8884018ef3801dcc"
+    })[identifier])
 end
-recording.modal:bind(recording.mods, "Z", function()
-    recording.overlays.switch("camera")
-    hs.http.get(
-        "http://localhost:4445/_/_RS026d8dd089fad7ac327569ef25a65290d5a22fbf")
-end)
-recording.modal:bind(recording.mods, "A", function()
-    recording.overlays.switch("pictureInPicture")
-    hs.http.get(
-        "http://localhost:4445/_/_RS29de72e1bca736566608e74b3d7f24635a1b80be")
-end)
-recording.modal:bind(recording.mods, "Q", function()
-    recording.overlays.switch("computer")
-    hs.http.get(
-        "http://localhost:4445/_/_RSa9ea17ea125746774f3f682d8884018ef3801dcc")
-end)
+recording.modal:bind(recording.mods, "Z",
+                     function() recording.scenes.switch("camera") end)
+recording.modal:bind(recording.mods, "A",
+                     function() recording.scenes.switch("pictureInPicture") end)
+recording.modal:bind(recording.mods, "Q",
+                     function() recording.scenes.switch("computer") end)
 recording.modal:bind(recording.mods, "S", function()
     local fullFrame = hs.screen.primaryScreen():fullFrame()
     hs.window.focusedWindow():move({
@@ -253,7 +249,7 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
     end
 end)
 function recording.modal:exited()
-    hs.fnutils.each(recording.overlays.overlays,
+    hs.fnutils.each(recording.scenes.overlays,
                     function(overlay) overlay:delete() end)
 
     recording.menubar.timer:stop()
