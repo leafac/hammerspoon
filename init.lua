@@ -150,6 +150,7 @@ OBS: 🎤 🔈 💻
     -- recording.cameraOverlay.restart()
 end
 function recording.menubar.state.camera.start()
+    hs.alert("🟥 🎥 👏")
     recording.menubar.state.camera.camera = true
     if recording.menubar.state.camera.timer ~= nil then
         recording.menubar.state.camera.timer:stop()
