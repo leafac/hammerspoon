@@ -125,8 +125,8 @@ function recording.modal:entered()
     hs.application.open("OBS")
     hs.open(projectFile)
     hs.dialog.blockAlert("", [[
-REAPER: 🎤 💻
-OBS: 🎤 💻
+REAPER: 🎤 🔈
+OBS: 🎤 🔈 💻
 ]], "Start Recording")
     hs.execute("node ~/Videos/TEMPLATE/obs StartRecording", true)
     hs.http.get("http://localhost:4445/_/1013")
