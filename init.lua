@@ -159,8 +159,7 @@ function recording.menubar.state.camera.start()
         recording.menubar.timer:fire()
     end
     recording.menubar.state.camera.timer =
-        hs.timer.doAfter(10, function()
-            -- TODO: hs.timer.doAfter(hs.timer.minutes(27), function()
+        hs.timer.doAfter(hs.timer.minutes(27), function()
             recording.menubar.state.camera.camera = false
         end)
 end
@@ -254,6 +253,7 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
                                         "Click me right as you RESTART recording on the camera",
                                         "Click me right as you STOP recording on the camera")
     if option == "Click me right as you RESTART recording on the camera" then
+        hs.http.get("http://localhost:4445/_/40157")
         recording.menubar.state.camera.start()
     elseif option == "Click me right as you STOP recording on the camera" then
         recording.modal:exit()
