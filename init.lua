@@ -93,7 +93,17 @@ end)
 
 local recording = {
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
-    menubar = {menubar = nil, timer = nil},
+    menubar = {
+        menubar = nil,
+        timer = nil,
+        state = {
+            heartbeat = false,
+            h5 = false,
+            obs = false,
+            reaper = false,
+            camera = false
+        }
+    },
     isCameraRecording = false
     -- cameraOverlay = {canvas = nil, timer = nil}
 }
@@ -111,29 +121,44 @@ function recording.modal:entered()
     hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
 
-    recording.menubar.menubar = hs.menubar.new()
+    recording.menubar.menubar = hs.menubar.new():setMenu(
+                                    function()
+            return {
+                {title = "H5", checked = recording.menubar.state.h5},
+                {title = "OBS", checked = recording.menubar.state.obs},
+                {title = "REAPER", checked = recording.menubar.state.reaper},
+                {title = "Camera", checked = recording.menubar.state.camera}
+            }
+        end)
     recording.menubar.timer = hs.timer.doEvery(10, function()
-        local h5 = "❌"
-        local reaper = "❌"
-        local obs = "❌"
-        local camera = "❌"
-        if hs.audiodevice.findOutputByName("H5") ~= nil then h5 = "🎤" end
-        local reaperStatus, reaperBody =
-            hs.http.get("http://localhost:4445/_/TRANSPORT")
-        if reaperStatus == 200 then
-            local reaperTransportPlayState =
-                hs.fnutils.split(reaperBody, "\t")[2]
-            if reaperTransportPlayState == "5" then reaper = "🔈" end
+        recording.menubar.state.heartbeat =
+            not recording.menubar.state.heartbeat
+        if hs.audiodevice.findOutputByName("H5") ~= nil then
+            recording.menubar.state.h5 = true
         end
         local obsOutput, obsStatus = hs.execute(
                                          [[npx obs-cli GetStreamingStatus]],
                                          true)
         if obsStatus and hs.json.decode(obsOutput).recording then
-            obs = "💻"
+            recording.menubar.state.obs = true
         end
-        if recording.isCameraRecording then camera = "🎥" end
-        recording.menubar.menubar:setTitle(
-            h5 .. " " .. reaper .. " " .. obs .. " " .. camera)
+        local reaperStatus, reaperBody =
+            hs.http.get("http://localhost:4445/_/TRANSPORT")
+        if reaperStatus == 200 then
+            local reaperTransportPlayState =
+                hs.fnutils.split(reaperBody, "\t")[2]
+            if reaperTransportPlayState == "5" then
+                recording.menubar.state.reaper = true
+            end
+        end
+        if recording.isCameraRecording then
+            recording.menubar.state.camera = true
+        end
+        local title = "🟥"
+        if h5 and reaper and obs and camera then
+            title = recording.menubar.state.heartbeat and "○" or "●"
+        end
+        recording.menubar.menubar:setTitle(title)
     end)
 
     -- TODO: Remove this and let the volume control be for built-in output by tapping on the inputs from the system keys
