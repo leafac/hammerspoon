@@ -46,8 +46,8 @@ hs.hotkey.bind(mods, "tab", function()
 end)
 
 local recording = {
-    mods = hs.fnutils.concat({"⌘"}, mods),
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
+    mods = hs.fnutils.concat({"⌘"}, mods),
     menubar = {
         menubar = nil,
         timer = nil,
@@ -56,11 +56,9 @@ local recording = {
             h5 = false,
             obs = false,
             reaper = false,
-            camera = false
+            camera = {camera = false, timer = nil}
         }
-    },
-    isCameraRecording = false
-    -- cameraOverlay = {canvas = nil, timer = nil}
+    }
 }
 function recording.modal:entered()
     local _, projectName = hs.dialog.textPrompt("🚪 🪟 💡 🎧 🎤 🎥",
@@ -76,13 +74,30 @@ function recording.modal:entered()
     hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
 
+    hs.screen.primaryScreen():setMode(1280, 720, 2)
+
+    hs.application.open("OBS")
+    hs.open(projectFile)
+    hs.dialog.blockAlert("", [[
+REAPER: 🎤 🔈
+OBS: 🎤 🔈 💻
+]], "Click me right as you start recording on the camera")
+    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
+                   projectDirectory .. [[\" }']], true)
+    hs.execute([[npx obs-cli StartRecording]], true)
+    hs.http.get("http://localhost:4445/_/1013")
+    recording.menubar.state.camera.start()
+
     recording.menubar.menubar = hs.menubar.new():setMenu(
                                     function()
             return {
                 {title = "H5", checked = recording.menubar.state.h5},
                 {title = "OBS", checked = recording.menubar.state.obs},
                 {title = "REAPER", checked = recording.menubar.state.reaper},
-                {title = "Camera", checked = recording.menubar.state.camera}
+                {
+                    title = "Camera",
+                    checked = recording.menubar.state.camera.camera
+                }
             }
         end)
     recording.menubar.timer = hs.timer.doEvery(10, function()
@@ -94,42 +109,20 @@ function recording.modal:entered()
         local obsOutput, obsStatus = hs.execute(
                                          [[npx obs-cli GetStreamingStatus]],
                                          true)
-        if obsStatus and hs.json.decode(obsOutput).recording then
-            recording.menubar.state.obs = true
-        end
+        recording.menubar.state.obs = obsStatus and
+                                          hs.json.decode(obsOutput).recording
         local reaperStatus, reaperBody =
             hs.http.get("http://localhost:4445/_/TRANSPORT")
-        if reaperStatus == 200 then
-            local reaperTransportPlayState =
-                hs.fnutils.split(reaperBody, "\t")[2]
-            if reaperTransportPlayState == "5" then
-                recording.menubar.state.reaper = true
-            end
-        end
-        if recording.isCameraRecording then
-            recording.menubar.state.camera = true
-        end
+        recording.menubar.state.reaper =
+            reaperStatus == 200 and hs.fnutils.split(reaperBody, "\t")[2] == "5"
         local title = "🟥"
-        if h5 and reaper and obs and camera then
+        if recording.menubar.state.h5 and recording.menubar.state.reaper and
+            recording.menubar.state.obs and
+            recording.menubar.state.camera.camera then
             title = recording.menubar.state.heartbeat and "○" or "●"
         end
         recording.menubar.menubar:setTitle(title)
     end):fire()
-
-    hs.screen.primaryScreen():setMode(1280, 720, 2)
-
-    hs.application.open("OBS")
-    hs.open(projectFile)
-    hs.dialog.blockAlert("", [[
-REAPER: 🎤 🔈
-OBS: 🎤 🔈 💻
-]], "Start Recording")
-    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
-                   projectDirectory .. [[\" }']], true)
-    hs.execute([[npx obs-cli StartRecording]], true)
-    hs.http.get("http://localhost:4445/_/1013")
-
-    -- CAMERA
 
     -- local frame = {w = 1280, h = 720}
     -- local padding = 3
@@ -156,7 +149,20 @@ OBS: 🎤 🔈 💻
     -- }):behavior({"canJoinAllSpaces", "stationary"}):show()
     -- recording.cameraOverlay.restart()
 end
-recording.modal:bind(recording.mods, "A", function()
+function recording.menubar.state.camera.start()
+    recording.menubar.state.camera.camera = true
+    if recording.menubar.state.camera.timer ~= nil then
+        recording.menubar.state.camera.timer:stop()
+    end
+    if recording.menubar.timer ~= nil and recording.menubar.timer:running() then
+        recording.menubar.timer:fire()
+    end
+    recording.menubar.state.camera.timer =
+        hs.timer.doAfter(hs.timer.minutes(27), function()
+            recording.menubar.state.camera.camera = false
+        end)
+end
+recording.modal:bind(recording.mods, "S", function()
     local fullFrame = hs.screen.primaryScreen():fullFrame()
     hs.window.focusedWindow():move({
         x = 0 / 4 * fullFrame.w,
@@ -165,7 +171,7 @@ recording.modal:bind(recording.mods, "A", function()
         h = 4 / 4 * fullFrame.h
     })
 end)
-recording.modal:bind(recording.mods, "S", function()
+recording.modal:bind(recording.mods, "X", function()
     local fullFrame = hs.screen.primaryScreen():fullFrame()
     hs.window.focusedWindow():move({
         x = 3 / 4 * fullFrame.w,
@@ -242,106 +248,28 @@ recording.modal:bind(mods, "return", function()
     if option == "Yes" then hs.reload() end
 end)
 recording.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("Stop the camera", "",
-                                        "Click me right as you restart the camera",
-                                        "Stop Recording")
-    if option == "Click me right as you restart the camera" then
-        table.insert(recording.events.camera,
-                     {start = hs.timer.secondsSinceEpoch(), stop = nil})
-        hs.json.write(recording.events, "~/Videos/events-backup.json", true,
-                      true)
-    elseif option == "Stop Recording" then
+    local option = hs.dialog.blockAlert("", "",
+                                        "Click me right as you RESTART recording on the camera",
+                                        "Click me right as you STOP recording on the camera")
+    if option == "Click me right as you RESTART recording on the camera" then
+        recording.menubar.state.camera.start()
+    elseif option == "Click me right as you STOP recording on the camera" then
         recording.modal:exit()
     end
 end)
 function recording.modal:exited()
     recording.menubar.timer:stop()
     recording.menubar.menubar:delete()
-    -- REAPER STOP 1016
-    recording.events.stop = hs.timer.secondsSinceEpoch()
-    hs.json.write(recording.events, "~/Videos/events-backup.json", true, true)
 
-    -- recording.cameraOverlay.timer:stop()
-    -- recording.cameraOverlay.canvas:delete()
-
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("", "",
-                         [[Click me after having clicked on “Stop Recording”]])
+    recording.menubar.state.camera.timer:stop()
+    hs.http.get("http://localhost:4445/_/1016")
+    hs.execute([[npx obs-cli StopRecording]], true)
+    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
+                   hs.fs.pathToAbsolute("~/Videos") .. [[\" }']], true)
     hs.application.open("OBS"):kill()
+    hs.open(projectFile)
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
-
-    hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
-
-    local projectOption, projectName = hs.dialog.textPrompt("Project name:", "",
-                                                            "",
-                                                            "Create Project",
-                                                            "Cancel")
-    if projectOption == "Cancel" then return end
-
-    local projectsDirectory = hs.fs.pathToAbsolute("~/Videos")
-    local projectDirectory = projectsDirectory .. "/" .. projectName
-    hs.execute([[mkdir "]] .. projectDirectory .. [["]])
-
-    local recordingFile = string.gsub(hs.execute(
-                                          [[ls "]] .. projectsDirectory ..
-                                              [["/*.mkv | tail -n 1]]), "%s*$",
-                                      "")
-    hs.execute([[~/Videos/TEMPLATE/ffmpeg -i "]] .. recordingFile ..
-                   [[" -map 0:0 -c copy "]] .. projectDirectory ..
-                   [[/computer.mp4" -map 0:1 -c copy "]] .. projectDirectory ..
-                   [[/microphone.aac" -map 0:2 -c copy "]] .. projectDirectory ..
-                   [[/computer.aac" && mv "]] .. recordingFile .. [[" ~/.Trash]])
-
-    hs.dialog.blockAlert("", "",
-                         "Click me after the recordings from the camera have been transferred to the computer")
-    local cameraRecordings = hs.fnutils.split(
-                                 string.gsub(
-                                     hs.execute(
-                                         [[ls "]] .. projectsDirectory ..
-                                             [["/MVI_*.MP4 | tail -n ]] ..
-                                             #recording.events.camera), "%s*$",
-                                     ""), "\n")
-    for index, cameraRecording in ipairs(cameraRecordings) do
-        hs.execute([[mv "]] .. cameraRecording .. [[" "]] .. projectDirectory ..
-                       [[/camera--]] .. index .. [[.mp4"]])
-    end
-
-    local templateDirectory = projectsDirectory .. "/TEMPLATE"
-    local templateFileHandle =
-        io.open(templateDirectory .. "/TEMPLATE.RPP", "r")
-    local project = templateFileHandle:read("*all")
-    templateFileHandle:close()
-    project = string.gsub(project, "LENGTH 5", "LENGTH " ..
-                              recording.events.stop - recording.events.start)
-    for index, event in ipairs(recording.events.camera) do
-        project = string.gsub(project, "NAME Camera", [[
-%0
-<ITEM
-  POSITION ]] .. event.start - recording.events.start .. [[
-
-  LENGTH ]] .. event.stop - event.start .. [[
-
-  <SOURCE VIDEO
-    FILE "camera--]] .. index .. [[.mp4"
-  >
->
-]])
-        project = string.gsub(project, ">%s*$", [[
-MARKER 0 ]] .. event.start - recording.events.start .. [[ ""
->
-]])
-    end
-    local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
-    local projectFileHandle = io.open(projectFile, "w")
-    projectFileHandle:write(project)
-    projectFileHandle:close()
-    hs.execute([[mv ~/Videos/events-backup.json ~/.Trash]])
-
-    hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
-                   projectDirectory .. [["]])
-
-    hs.execute([[open "]] .. projectFile .. [["]])
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
