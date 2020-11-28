@@ -401,7 +401,7 @@ globalVolumeEventTapToPreventGarbageCollection =
             muted = level == 0
         elseif systemKey.key == "SOUND_UP" then
             level = math.min(levels, level + 1)
-            muted = level == 0
+            muted = false
         else
             return
         end
