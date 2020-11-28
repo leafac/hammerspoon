@@ -225,36 +225,6 @@ recording.modal:bind(recording.mods, "C", function()
         h = 1 / 4 * fullFrame.h
     })
 end)
--- hs.hotkey.bind(mods, "V", function()
---     if not recording.isRecording then return end
---     local canvas = recording.cameraOverlay.canvas
---     if canvas:isShowing() then
---         canvas:hide()
---     else
---         canvas:show()
---     end
--- end)
--- hs.hotkey.bind(hs.fnutils.concat({"⇧"}, mods), "V", function()
---     if not recording.isRecording then return end
---     recording.cameraOverlay.restart()
--- end)
--- function recording.cameraOverlay.restart()
---     hs.dialog.blockAlert("", [[
--- 1. Microphone.
--- 2. Computer audio.
--- 3. OBS.
--- 4. Camera.
--- 5. CLAP!
--- ]])
---     if recording.cameraOverlay.timer then
---         recording.cameraOverlay.timer:stop()
---     end
---     recording.cameraOverlay.canvas[1].fillColor.red = 0
---     recording.cameraOverlay.timer = hs.timer.doAfter(hs.timer.minutes(27),
---                                                      function()
---         recording.cameraOverlay.canvas[1].fillColor.red = 1
---     end)
--- end
 recording.modal:bind(recording.mods, "space", function()
     hs.http.get("http://localhost:4445/_/40157")
     hs.alert("✂️")
