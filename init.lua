@@ -168,10 +168,13 @@ function recording.menubar.state.camera.start()
         end)
 end
 function recording.scenes.switch(identifier)
-    hs.fnutils.each(recording.scenes.overlays,
-                    function(overlay) overlay:hide() end)
+    recording.scenes.hide()
     local overlay = recording.scenes.overlays[identifier]
     if overlay ~= nil then overlay:show() end
+end
+function recording.scenes.hide()
+    hs.fnutils.each(recording.scenes.overlays,
+                    function(overlay) overlay:hide() end)
 end
 recording.modal:bind(recording.mods, "Z",
                      function() recording.scenes.switch("camera") end)
@@ -277,6 +280,8 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
     end
 end)
 function recording.modal:exited()
+    recording.scenes.hide()
+
     recording.menubar.timer:stop()
     recording.menubar.menubar:delete()
 
