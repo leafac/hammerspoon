@@ -116,8 +116,7 @@ function recording.scenes.start()
         for _, element in pairs(overlay) do element.fillColor.red = 0 end
     end)
     if recording.scenes.timer ~= nil then recording.scenes.timer:stop() end
-    -- TODO: recording.scenes.timer = hs.timer.doAfter(hs.timer.minutes(27), function()
-    recording.scenes.timer = hs.timer.doAfter(10, function()
+    recording.scenes.timer = hs.timer.doAfter(hs.timer.minutes(27), function()
         hs.fnutils.each(recording.scenes.overlays, function(overlay)
             for _, element in pairs(overlay) do
                 element.fillColor.red = 1
