@@ -48,18 +48,7 @@ end)
 local recording = {
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
     mods = hs.fnutils.concat({"⌘"}, mods),
-    menubar = {
-        menubar = nil,
-        timer = nil,
-        state = {
-            heartbeat = false,
-            h5 = false,
-            reaper = false,
-            obs = false,
-            camera = {camera = false, timer = nil}
-        }
-    },
-    scenes = {overlays = nil}
+    scenes = {overlays = nil, timer = nil}
 }
 function recording.modal:entered()
     local _, projectName = hs.dialog.textPrompt("🚪 🪟 💡 🎧 🎤 🎥",
@@ -75,6 +64,14 @@ function recording.modal:entered()
     hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
 
+    hs.audiodevice.watcher.setCallback(function(event)
+        if event == "dev#" then
+            hs.dialog.blockAlert(
+                "An audio device was connceted or disconnected.", "")
+        end
+    end)
+    hs.audiodevice.watcher.start()
+
     hs.screen.primaryScreen():setMode(1280, 720, 2)
 
     hs.open(projectFile)
@@ -85,40 +82,6 @@ function recording.modal:entered()
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
                    projectDirectory .. [[\" }']], true)
     hs.execute([[npx obs-cli StartRecording]], true)
-    recording.menubar.state.camera.start()
-
-    recording.menubar.menubar = hs.menubar.new():setMenu(
-                                    function()
-            return {
-                {title = "H5", checked = recording.menubar.state.h5},
-                {title = "REAPER", checked = recording.menubar.state.reaper},
-                {title = "OBS", checked = recording.menubar.state.obs},
-                {
-                    title = "Camera",
-                    checked = recording.menubar.state.camera.camera
-                }
-            }
-        end)
-    recording.menubar.timer = hs.timer.doEvery(10, function()
-        recording.menubar.state.heartbeat =
-            not recording.menubar.state.heartbeat
-        recording.menubar.state.h5 = hs.audiodevice.findOutputByName("H5") ~=
-                                         nil
-        local reaperStatus, reaperBody =
-            hs.http.get("http://localhost:4445/_/TRANSPORT")
-        recording.menubar.state.reaper =
-            reaperStatus == 200 and hs.fnutils.split(reaperBody, "\t")[2] == "5"
-        local obsOutput, obsStatus = hs.execute(
-                                         [[npx obs-cli GetStreamingStatus]],
-                                         true)
-        recording.menubar.state.obs = obsStatus and
-                                          hs.json.decode(obsOutput).recording
-        recording.menubar.menubar:setTitle(
-            (recording.menubar.state.h5 and recording.menubar.state.obs and
-                recording.menubar.state.reaper and
-                recording.menubar.state.camera.camera) and
-                (recording.menubar.state.heartbeat and "○" or "●") or "🟥")
-    end):fire()
 
     local frame = {w = 1280, h = 720}
     local padding = 3
@@ -144,21 +107,24 @@ function recording.modal:entered()
                 }
             }):behavior({"canJoinAllSpaces", "stationary"})
     }
+    recording.scenes.start()
     recording.scenes.switch("camera")
 end
-function recording.menubar.state.camera.start()
-    hs.alert("🟥 🎥 👏")
-    recording.menubar.state.camera.camera = true
-    if recording.menubar.state.camera.timer ~= nil then
-        recording.menubar.state.camera.timer:stop()
-    end
-    recording.menubar.state.camera.timer =
-        hs.timer.doAfter(hs.timer.minutes(27), function()
-            recording.menubar.state.camera.camera = false
+function recording.scenes.start()
+    hs.dialog
+        .blockAlert("REAPER: 🎤 🔈\nOBS: 🎤 🔈 💻\n🎥 👏", "")
+    hs.fnutils.each(recording.scenes.overlays, function(overlay)
+        for _, element in pairs(overlay) do element.fillColor.red = 0 end
+    end)
+    if recording.scenes.timer ~= nil then recording.scenes.timer:stop() end
+    -- TODO: recording.scenes.timer = hs.timer.doAfter(hs.timer.minutes(27), function()
+    recording.scenes.timer = hs.timer.doAfter(10, function()
+        hs.fnutils.each(recording.scenes.overlays, function(overlay)
+            for _, element in pairs(overlay) do
+                element.fillColor.red = 1
+            end
         end)
-    if recording.menubar.timer ~= nil and recording.menubar.timer:running() then
-        recording.menubar.timer:fire()
-    end
+    end)
 end
 function recording.scenes.switch(identifier)
     hs.http.get("http://localhost:4445/_/" .. ({
@@ -238,19 +204,16 @@ recording.modal:bind({"⌘", "⇧"}, "2", function()
                                         "Click me right as you STOP recording on the camera")
     if option == "Click me right as you RESTART recording on the camera" then
         hs.http.get("http://localhost:4445/_/40157")
-        recording.menubar.state.camera.start()
+        recording.scenes.start()
     elseif option == "Click me right as you STOP recording on the camera" then
         recording.modal:exit()
     end
 end)
 function recording.modal:exited()
+    recording.scenes.timer:stop()
     hs.fnutils.each(recording.scenes.overlays,
                     function(overlay) overlay:delete() end)
 
-    recording.menubar.timer:stop()
-    recording.menubar.menubar:delete()
-
-    recording.menubar.state.camera.timer:stop()
     hs.execute([[npx obs-cli StopRecording]], true)
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
                    hs.fs.pathToAbsolute("~/Videos") .. [[\" }']], true)
@@ -259,6 +222,8 @@ function recording.modal:exited()
     hs.application.open("REAPER")
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
+
+    hs.audiodevice.watcher.stop()
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
