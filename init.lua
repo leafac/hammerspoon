@@ -324,6 +324,7 @@ globalVolumeEventTapToPreventGarbageCollection =
         end
         builtInOutput:setOutputVolume(level / levels * maximum)
         builtInOutput:setOutputMuted(muted)
+        hs.alert.closeAll()
         hs.alert((muted and "🔇" or "🔊") .. " " ..
                      string.rep("⬛︎", level) ..
                      string.rep("⬜︎", levels - level))
