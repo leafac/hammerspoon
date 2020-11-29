@@ -161,15 +161,15 @@ function recording.menubar.state.camera.start()
     end
 end
 function recording.scenes.switch(identifier)
-    hs.fnutils.each(recording.scenes.overlays,
-                    function(overlay) overlay:hide() end)
-    local overlay = recording.scenes.overlays[identifier]
-    if overlay ~= nil then overlay:show() end
     hs.http.get("http://localhost:4445/_/" .. ({
         camera = "_RS026d8dd089fad7ac327569ef25a65290d5a22fbf",
         pictureInPicture = "_RS29de72e1bca736566608e74b3d7f24635a1b80be",
         computer = "_RSa9ea17ea125746774f3f682d8884018ef3801dcc"
     })[identifier])
+    hs.fnutils.each(recording.scenes.overlays,
+                    function(overlay) overlay:hide() end)
+    local overlay = recording.scenes.overlays[identifier]
+    if overlay ~= nil then overlay:show() end
 end
 recording.modal:bind(recording.mods, "Z",
                      function() recording.scenes.switch("camera") end)
