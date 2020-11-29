@@ -79,10 +79,8 @@ function recording.modal:entered()
 
     hs.open(projectFile)
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", [[
-REAPER: 🎤 🔈
-OBS: 🎤 🔈 💻
-]], "Click me right as you start recording on the camera")
+    hs.dialog.blockAlert("", "REAPER: 🎤 🔈\nOBS: 🎤 🔈 💻",
+                         "Click me right as you start recording on the camera")
     hs.http.get("http://localhost:4445/_/1013")
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
                    projectDirectory .. [[\" }']], true)
@@ -104,9 +102,8 @@ OBS: 🎤 🔈 💻
     recording.menubar.timer = hs.timer.doEvery(10, function()
         recording.menubar.state.heartbeat =
             not recording.menubar.state.heartbeat
-        if hs.audiodevice.findOutputByName("H5") ~= nil then
-            recording.menubar.state.h5 = true
-        end
+        recording.menubar.state.h5 = hs.audiodevice.findOutputByName("H5") ~=
+                                         nil
         local reaperStatus, reaperBody =
             hs.http.get("http://localhost:4445/_/TRANSPORT")
         recording.menubar.state.reaper =
@@ -116,13 +113,11 @@ OBS: 🎤 🔈 💻
                                          true)
         recording.menubar.state.obs = obsStatus and
                                           hs.json.decode(obsOutput).recording
-        local title = "🟥"
-        if recording.menubar.state.h5 and recording.menubar.state.obs and
-            recording.menubar.state.reaper and
-            recording.menubar.state.camera.camera then
-            title = recording.menubar.state.heartbeat and "○" or "●"
-        end
-        recording.menubar.menubar:setTitle(title)
+        recording.menubar.menubar:setTitle(
+            (recording.menubar.state.h5 and recording.menubar.state.obs and
+                recording.menubar.state.reaper and
+                recording.menubar.state.camera.camera) and
+                (recording.menubar.state.heartbeat and "○" or "●") or "🟥")
     end):fire()
 
     local frame = {w = 1280, h = 720}
