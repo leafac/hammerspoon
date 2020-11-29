@@ -75,8 +75,9 @@ function recording.modal:entered()
     hs.screen.primaryScreen():setMode(1280, 720, 2)
 
     hs.open(projectFile)
+    hs.dialog.blockAlert("REAPER", "🎤 🔈")
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", "REAPER: 🎤 🔈\nOBS: 🎤 🔈 💻",
+    hs.dialog.blockAlert("OBS", "🎤 🔈 💻",
                          "Click me right as you start recording on the camera")
     hs.http.get("http://localhost:4445/_/1013")
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
@@ -111,8 +112,6 @@ function recording.modal:entered()
     recording.scenes.switch("camera")
 end
 function recording.scenes.start()
-    hs.dialog
-        .blockAlert("REAPER: 🎤 🔈\nOBS: 🎤 🔈 💻\n🎥 👏", "")
     hs.fnutils.each(recording.scenes.overlays, function(overlay)
         for _, element in pairs(overlay) do element.fillColor.red = 0 end
     end)
@@ -125,6 +124,11 @@ function recording.scenes.start()
             end
         end)
     end)
+    hs.application.open("REAPER")
+    hs.dialog.blockAlert("REAPER", "🔴")
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("OBS", "🔴")
+    hs.dialog.blockAlert("🎥 👏", "")
 end
 function recording.scenes.switch(identifier)
     hs.http.get("http://localhost:4445/_/" .. ({
