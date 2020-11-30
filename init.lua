@@ -48,9 +48,25 @@ end)
 local recording = {
     modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
     mods = hs.fnutils.concat({"⌘"}, mods),
-    scenes = {overlays = nil, timer = nil}
+    scenes = {overlays = nil, timer = nil},
+    events = {events = nil}
 }
 function recording.modal:entered()
+    local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
+    builtInOutput:setOutputMuted(false)
+    builtInOutput:setOutputVolume(20)
+    hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
+
+    hs.audiodevice.watcher.setCallback(function(event)
+        if event == "dev#" then
+            hs.dialog.blockAlert(
+                "An audio device was connceted or disconnected.", "")
+        end
+    end)
+    hs.audiodevice.watcher.start()
+
+    hs.screen.primaryScreen():setMode(1280, 720, 2)
+
     local _, projectName = hs.dialog.textPrompt("🚪 🪟 💡 🎧 🎤 🎥",
                                                 "Project Name:", "",
                                                 "Create Project")
@@ -63,16 +79,6 @@ function recording.modal:entered()
                    projectFile .. [["]])
     hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
                    projectDirectory .. [["]])
-
-    hs.audiodevice.watcher.setCallback(function(event)
-        if event == "dev#" then
-            hs.dialog.blockAlert(
-                "An audio device was connceted or disconnected.", "")
-        end
-    end)
-    hs.audiodevice.watcher.start()
-
-    hs.screen.primaryScreen():setMode(1280, 720, 2)
 
     hs.open(projectFile)
     hs.dialog.blockAlert("REAPER", "🎤 🔈")
@@ -260,43 +266,6 @@ end
 screenRoundedCorners.start()
 globalScreenRoundedCornersWatcherToPreventGarbageCollection =
     hs.screen.watcher.new(function() screenRoundedCorners.start() end):start()
-
-globalVolumeEventTapToPreventGarbageCollection =
-    hs.eventtap.new({hs.eventtap.event.types.NSSystemDefined}, function(event)
-        local systemKey = event:systemKey()
-        if not systemKey.down or next(event:getFlags()) ~= nil then
-            return
-        end
-        local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
-        local maximum = 100
-        local levels = 16
-        local level = math.floor(
-                          builtInOutput:outputVolume() / maximum * levels + 0.5)
-        local muted = builtInOutput:outputMuted()
-        if systemKey.key == "MUTE" then
-            if level == 0 then
-                level = level + 1
-                muted = false
-            else
-                muted = not muted
-            end
-        elseif systemKey.key == "SOUND_DOWN" then
-            level = math.max(0, level - 1)
-            muted = level == 0
-        elseif systemKey.key == "SOUND_UP" then
-            level = math.min(levels, level + 1)
-            muted = false
-        else
-            return
-        end
-        builtInOutput:setOutputVolume(level / levels * maximum)
-        builtInOutput:setOutputMuted(muted)
-        hs.alert.closeAll()
-        hs.alert((muted and "🔇" or "🔊") .. " " ..
-                     string.rep("⬛︎", level) ..
-                     string.rep("⬜︎", levels - level))
-        return true
-    end):start()
 
 hs.hotkey.bind(mods, "P", function()
     hs.dialog.blockAlert("", [[
