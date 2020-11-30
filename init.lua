@@ -87,11 +87,7 @@ function recording.modal:entered()
     local frame = {w = 1280, h = 720}
     local padding = 3
     recording.scenes.overlays = {
-        camera = hs.canvas.new({x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
-            {type = "rectangle", action = "fill", fillColor = {alpha = 0.5}})
-            :behavior({"canJoinAllSpaces", "stationary"}),
-        pictureInPicture = hs.canvas.new(
-            {x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
+        [1] = hs.canvas.new({x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
             {
                 type = "rectangle",
                 action = "fill",
@@ -106,10 +102,13 @@ function recording.modal:entered()
                     xRadius = roundedCornerRadius,
                     yRadius = roundedCornerRadius
                 }
-            }):behavior({"canJoinAllSpaces", "stationary"})
+            }):behavior({"canJoinAllSpaces", "stationary"}),
+        [2] = hs.canvas.new({x = 0, y = 0, w = frame.w, h = frame.h}):appendElements(
+            {type = "rectangle", action = "fill", fillColor = {alpha = 0.5}})
+            :behavior({"canJoinAllSpaces", "stationary"})
     }
     recording.scenes.start()
-    recording.scenes.switch("camera")
+    recording.scenes.switch(1)
 end
 function recording.scenes.start()
     hs.fnutils.each(recording.scenes.overlays, function(overlay)
@@ -131,9 +130,9 @@ function recording.scenes.start()
 end
 function recording.scenes.switch(identifier)
     hs.http.get("http://localhost:4445/_/" .. ({
-        camera = "_RS026d8dd089fad7ac327569ef25a65290d5a22fbf",
-        pictureInPicture = "_RS29de72e1bca736566608e74b3d7f24635a1b80be",
-        computer = "_RSa9ea17ea125746774f3f682d8884018ef3801dcc"
+        [1] = "_RSb05e5059d9f46f784496241c368683e104496408",
+        [2] = "_RS5a192aa77f307656aa8b7322aa253f24a28ee6cb",
+        [3] = "_RS166e0af08557fa557a9e1e4938f7b06718daa334"
     })[identifier])
     hs.fnutils.each(recording.scenes.overlays,
                     function(overlay) overlay:hide() end)
@@ -141,11 +140,11 @@ function recording.scenes.switch(identifier)
     if overlay ~= nil then overlay:show() end
 end
 recording.modal:bind(recording.mods, "Z",
-                     function() recording.scenes.switch("camera") end)
+                     function() recording.scenes.switch(2) end)
 recording.modal:bind(recording.mods, "A",
-                     function() recording.scenes.switch("pictureInPicture") end)
+                     function() recording.scenes.switch(1) end)
 recording.modal:bind(recording.mods, "Q",
-                     function() recording.scenes.switch("computer") end)
+                     function() recording.scenes.switch(3) end)
 recording.modal:bind(recording.mods, "S", function()
     local fullFrame = hs.screen.primaryScreen():fullFrame()
     hs.window.focusedWindow():move({
