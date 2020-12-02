@@ -272,11 +272,59 @@ function recording.configuration.modal:exited()
     hs.screen.primaryScreen():setMode(1280, 800, 2)
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
-    -- local _, projectName = hs.dialog.textPrompt("Project Name:", "", "",
-    --                                             "Create Project")
-    -- local projectDirectory = projectsDirectory .. "/" .. projectName
+    local option, projectName = hs.dialog.textPrompt("Project Name:", "", "",
+                                                     "Create Project", "Cancel")
+    if option == "Cancel" then return end
+
+    local projectDirectory = recording.configuration.paths.videos .. "/" ..
+                                 projectName
+    if hs.execute([[ls "]] .. projectDirectory .. [["]]) ~= "" then
+        return hs.dialog.blockAlert("[ERROR] Project already exists: ‘" ..
+                                        projectDirectory .. "’", "")
+    end
+    hs.execute([[mkdir "]] .. projectDirectory .. [["]])
+
+    local recordingFile = string.gsub(hs.execute(
+                                          [[ls "]] ..
+                                              recording.configuration.paths
+                                                  .videos ..
+                                              [["/*.mkv | tail -n 1]]), "%s*$",
+                                      "")
+    if recordingFile == "" then
+        return hs.dialog.blockAlert("[ERROR] No recording file: ‘" ..
+                                        recording.configuration.paths.videos ..
+                                        "/*.mkv’", "")
+    end
+    hs.execute([["]] .. recording.configuration.paths.template ..
+                   [[/ffmpeg" -i "]] .. recordingFile ..
+                   [[" -map 0:0 -c copy "]] .. projectDirectory ..
+                   [[/computer.mp4" -map 0:1 -c copy "]] .. projectDirectory ..
+                   [[/microphone.aac" -map 0:2 -c copy "]] .. projectDirectory ..
+                   [[/computer.aac" && mv "]] .. recordingFile .. [[" ~/.Trash]])
+
+    hs.open(projectDirectory)
+    hs.dialog.blockAlert("", "",
+                         "Click me after having transferred the " ..
+                             #recording.state.events.cameras ..
+                             " files from the camera")
+    local cameraFiles = hs.fnutils.split(
+                            string.gsub(hs.execute(
+                                            [[ls "]] .. projectDirectory ..
+                                                [["/MVI_*.MP4]]), "%s*$", ""),
+                            "\n")
+    if #cameraFiles ~= #recording.state.events.cameras then
+        return hs.dialog.blockAlert(
+                   "[ERROR] The number of camera files in the project directory (" ..
+                       #cameraFiles ..
+                       ") doesn’t match the number of camera events (" ..
+                       #recording.state.events.cameras .. ")", "")
+    end
+    for index, file in ipairs(cameraFiles) do
+        hs.execute([[mv "]] .. file .. [[" "]] .. projectDirectory ..
+                       [[/camera--]] .. index .. [[.mp4"]])
+    end
+
     -- local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
-    -- hs.execute([[mkdir "]] .. projectDirectory .. [["]])
     -- hs.execute([[cp "]] .. templateDirectory .. [[/TEMPLATE.RPP" "]] ..
     --                projectFile .. [["]])
     -- hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
