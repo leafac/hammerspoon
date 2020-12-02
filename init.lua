@@ -237,7 +237,7 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "space",
     recording.updateEvents(function(time)
         table.insert(recording.state.events.edits, time)
     end)
-    hs.alert("✂️")
+    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
 end)
 recording.configuration.modal:bind(modifiers, "return", function()
     local option = hs.dialog.blockAlert(
@@ -246,7 +246,7 @@ recording.configuration.modal:bind(modifiers, "return", function()
     if option == "Yes" then hs.reload() end
 end)
 recording.configuration.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("Stop recording on the camera.", "",
+    local option = hs.dialog.blockAlert("Stop recording on the camera", "",
                                         "Continue Recording", "Stop Recording")
     if option == "Continue Recording" then
         recording.startCamera()
