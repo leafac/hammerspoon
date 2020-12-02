@@ -263,17 +263,17 @@ function recording.configuration.modal:exited()
     hs.audiodevice.watcher.stop()
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
-    local _, projectName = hs.dialog.textPrompt("Project Name:", "", "",
-                                                "Create Project")
-    local projectDirectory = projectsDirectory .. "/" .. projectName
-    local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
-    hs.execute([[mkdir "]] .. projectDirectory .. [["]])
-    hs.execute([[cp "]] .. templateDirectory .. [[/TEMPLATE.RPP" "]] ..
-                   projectFile .. [["]])
-    hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
-                   projectDirectory .. [["]])
+    -- local _, projectName = hs.dialog.textPrompt("Project Name:", "", "",
+    --                                             "Create Project")
+    -- local projectDirectory = projectsDirectory .. "/" .. projectName
+    -- local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
+    -- hs.execute([[mkdir "]] .. projectDirectory .. [["]])
+    -- hs.execute([[cp "]] .. templateDirectory .. [[/TEMPLATE.RPP" "]] ..
+    --                projectFile .. [["]])
+    -- hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
+    --                projectDirectory .. [["]])
 
-    hs.open(projectFile)
+    -- hs.open(projectFile)
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
