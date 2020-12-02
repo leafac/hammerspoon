@@ -327,7 +327,7 @@ function recording.configuration.modal:exited()
                          [[ "Camera ]] .. index .. [["]])
     end
     projectText = string.gsub(projectText, "NAME Camera",
-                              "%0\n" .. table.concat(cameraItems, "\n"))
+                              "%0\n" .. table.concat(cameraItems, "\n") .. "\n")
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(cameraMarkers, "\n") .. "\n%0")
 
@@ -352,7 +352,7 @@ function recording.configuration.modal:exited()
         ]])
     end
     projectText = string.gsub(projectText, "NAME Video",
-                              "%0\n" .. table.concat(sceneItems, "\n"))
+                              "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
 
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(
