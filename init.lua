@@ -67,7 +67,6 @@ function recording.configuration.modal:entered()
                                       recording.configuration.frame.h, 2)
 
     recording.state = {
-        overlays = nil,
         events = {
             start = nil,
             stop = nil,
@@ -75,6 +74,7 @@ function recording.configuration.modal:entered()
             scenes = {},
             edits = {}
         },
+        overlays = nil,
         cameraTimer = nil
     }
 
@@ -85,6 +85,21 @@ function recording.configuration.modal:entered()
         end
     end)
     hs.audiodevice.watcher.start()
+
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("", "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
+                         "Click me when your next click will be to “Start Recording” in OBS")
+    local startRecordingTap
+    startRecordingTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp},
+                                        function()
+        recording.updateEvents(function(time)
+            recording.state.events.start = time
+        end)
+        startRecordingTap:stop()
+        hs.alert("“Start Recording” captured")
+    end):start()
+    hs.dialog.blockAlert("", "",
+                         "Click me after you have clicked on “Start Recording” in OBS")
 
     recording.state.overlays = {
         [0] = hs.canvas.new({
@@ -122,21 +137,6 @@ function recording.configuration.modal:entered()
             fillColor = {alpha = 0.5}
         }):behavior({"canJoinAllSpaces", "stationary"})
     }
-
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("", "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
-                         "Click me when your next click will be to “Start Recording” in OBS")
-    local startRecordingTap
-    startRecordingTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp},
-                                        function()
-        recording.updateEvents(function(time)
-            recording.state.events.start = time
-        end)
-        startRecordingTap:stop()
-        hs.alert("“Start Recording” captured")
-    end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after you have clicked on “Start Recording” in OBS")
 
     recording.startCamera()
     recording.switchToScene(1)
@@ -276,6 +276,7 @@ function recording.configuration.modal:exited()
                                                      "Create Project", "Cancel")
     if option == "Cancel" then return end
 
+    -- TODO: Retry
     local projectDirectory = recording.configuration.paths.videos .. "/" ..
                                  projectName
     if hs.execute([[ls "]] .. projectDirectory .. [["]]) ~= "" then
@@ -284,12 +285,19 @@ function recording.configuration.modal:exited()
     end
     hs.execute([[mkdir "]] .. projectDirectory .. [["]])
 
+    -- hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
+    --                projectDirectory .. [["]])
+    -- local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
+    -- hs.execute([[cp "]] .. templateDirectory .. [[/TEMPLATE.RPP" "]] ..
+    --                projectFile .. [["]])
+
     local recordingFile = string.gsub(hs.execute(
                                           [[ls "]] ..
                                               recording.configuration.paths
                                                   .videos ..
                                               [["/*.mkv | tail -n 1]]), "%s*$",
                                       "")
+    -- TODO: Retry
     if recordingFile == "" then
         return hs.dialog.blockAlert("[ERROR] No recording file: ‘" ..
                                         recording.configuration.paths.videos ..
@@ -312,6 +320,7 @@ function recording.configuration.modal:exited()
                                             [[ls "]] .. projectDirectory ..
                                                 [["/MVI_*.MP4]]), "%s*$", ""),
                             "\n")
+    -- TODO: Retry
     if #cameraFiles ~= #recording.state.events.cameras then
         return hs.dialog.blockAlert(
                    "[ERROR] The number of camera files in the project directory (" ..
@@ -323,12 +332,6 @@ function recording.configuration.modal:exited()
         hs.execute([[mv "]] .. file .. [[" "]] .. projectDirectory ..
                        [[/camera--]] .. index .. [[.mp4"]])
     end
-
-    -- local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
-    -- hs.execute([[cp "]] .. templateDirectory .. [[/TEMPLATE.RPP" "]] ..
-    --                projectFile .. [["]])
-    -- hs.execute([[cp "]] .. templateDirectory .. [[/rounded-corners.png" "]] ..
-    --                projectDirectory .. [["]])
 
     -- hs.open(projectFile)
 end
