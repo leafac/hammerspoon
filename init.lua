@@ -80,7 +80,7 @@ function recording.configuration.modal:entered()
     }
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
+    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
                          "Click me when your next click will be to “Start Recording” in OBS")
     local startRecordingTap
     startRecordingTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp},
@@ -305,6 +305,7 @@ function recording.configuration.modal:exited()
     projectText = string.gsub(projectText, "LENGTH %d+", "LENGTH " ..
                                   (recording.state.events.stop -
                                       recording.state.events.start))
+
     local cameraItems = {}
     local cameraMakers = {}
     for index, start in ipairs(recording.state.events.cameras) do
@@ -329,6 +330,7 @@ function recording.configuration.modal:exited()
                               "%0\n" .. table.concat(cameraItems, "\n"))
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(cameraMarkers, "\n") .. "\n%0")
+
     local sceneItems = {}
     for index, scene in ipairs(recording.state.events.cameras) do
         table.insert(sceneItems, [[
@@ -351,6 +353,7 @@ function recording.configuration.modal:exited()
     end
     projectText = string.gsub(projectText, "NAME Video",
                               "%0\n" .. table.concat(sceneItems, "\n"))
+
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(
                                   hs.fnutils.map(recording.state.events.edits,
