@@ -323,7 +323,7 @@ function recording.configuration.modal:exited()
             >
         ]])
         table.insert(cameraMakers,
-                     [[MARKER 0 ]] .. (camera - recording.state.events.start) ..
+                     [[MARKER 0 ]] .. (start - recording.state.events.start) ..
                          [[ "Camera ]] .. index .. [["]])
     end
     projectText = string.gsub(projectText, "NAME Camera",
