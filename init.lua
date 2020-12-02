@@ -149,12 +149,12 @@ function recording.updateEvents(updater)
                   true)
 end
 function recording.startCamera()
-    hs.dialog.blockAlert("💻 🎥", "",
+    hs.dialog.blockAlert("", "",
                          "Click me right as you start recording on the camera")
     recording.updateEvents(function(time)
         table.insert(recording.state.events.cameras, time)
     end)
-    hs.alert("👏")
+    hs.alert("💻 🎥 👏")
     hs.fnutils.each(recording.state.overlays, function(overlay)
         hs.fnutils.each(overlay, function(element)
             element.fillColor.red = 0
