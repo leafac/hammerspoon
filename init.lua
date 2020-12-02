@@ -333,7 +333,7 @@ function recording.configuration.modal:exited()
                               table.concat(cameraMarkers, "\n") .. "\n%0")
 
     local sceneItems = {}
-    for index, scene in ipairs(recording.state.events.cameras) do
+    for index, scene in ipairs(recording.state.events.scenes) do
         table.insert(sceneItems, [[
             <ITEM
                 NAME ]] .. scene.scene .. [[
