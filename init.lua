@@ -72,7 +72,7 @@ function recording.configuration.modal:entered()
             start = nil,
             stop = nil,
             cameras = {},
-            inputs = {},
+            tracks = {},
             edits = {}
         },
         overlays = nil,
@@ -140,7 +140,7 @@ function recording.configuration.modal:entered()
     }
 
     recording.startCamera()
-    recording.switchToInput(1)
+    recording.switchToTrack(1)
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
@@ -174,21 +174,21 @@ function recording.startCamera()
             end)
         end)
 end
-function recording.switchToInput(input)
+function recording.switchToTrack(track)
     recording.updateEvents(function(time)
-        table.insert(recording.state.events.inputs, {time = time, input = input})
+        table.insert(recording.state.events.tracks, {time = time, track = track})
     end)
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:hide() end)
-    local overlay = recording.state.overlays[input]
+    local overlay = recording.state.overlays[track]
     if overlay ~= nil then overlay:show() end
 end
 recording.configuration.modal:bind(recording.configuration.modifiers, "Z",
-                                   function() recording.switchToInput(1) end)
+                                   function() recording.switchToTrack(1) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "A",
-                                   function() recording.switchToInput(0) end)
+                                   function() recording.switchToTrack(0) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "Q",
-                                   function() recording.switchToInput(2) end)
+                                   function() recording.switchToTrack(2) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "S",
                                    function()
     hs.window.focusedWindow():move({
@@ -329,18 +329,18 @@ function recording.configuration.modal:exited()
                               "%0\n" .. table.concat(cameraItems, "\n"))
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(cameraMarkers, "\n") .. "\n%0")
-    local inputItems = {}
-    for index, input in ipairs(recording.state.events.cameras) do
-        table.insert(inputItems, [[
+    local trackItems = {}
+    for index, track in ipairs(recording.state.events.cameras) do
+        table.insert(trackItems, [[
             <ITEM
-                NAME ]] .. input.input .. [[
+                NAME ]] .. track.track .. [[
 
-                POSITION ]] .. (input.start - recording.state.events.start) ..
+                POSITION ]] .. (track.start - recording.state.events.start) ..
                          [[
 
-                LENGTH ]] .. ((index < #recording.state.events.inputs and
-                         recording.state.events.inputs[index + 1].start or
-                         recording.state.events.stop) - input.start) .. [[
+                LENGTH ]] .. ((index < #recording.state.events.tracks and
+                         recording.state.events.tracks[index + 1].start or
+                         recording.state.events.stop) - track.start) .. [[
 
                 <SOURCE VIDEOEFFECT
                     <CODE
@@ -350,7 +350,7 @@ function recording.configuration.modal:exited()
         ]])
     end
     projectText = string.gsub(projectText, "NAME Video",
-                              "%0\n" .. table.concat(inputItems, "\n"))
+                              "%0\n" .. table.concat(trackItems, "\n"))
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(
                                   hs.fnutils.map(recording.state.events.edits,
