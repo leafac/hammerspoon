@@ -390,21 +390,19 @@ function recording.configuration.modal:exited()
                    [[/computer.aac" && mv "]] .. recordingFile .. [[" ~/.Trash]])
 
     local cameraFiles
-    hs.open(projectDirectory)
     repeat
         hs.dialog.blockAlert("", "",
-                             "Click me after having transferred the " ..
-                                 #recording.state.events.cameras ..
-                                 " files from the camera")
+                             "Click me after having connected the camera memory card")
         cameraFiles = hs.fnutils.split(string.gsub(
                                            hs.execute(
-                                               [[ls "]] .. projectDirectory ..
-                                                   [["/MVI_*.MP4]]), "%s*$", ""),
+                                               [[ls "/Volumes/EOS_DIGITAL/DCIM/100CANON/"MVI_*.MP4 | tail -n ]] ..
+                                                   #recording.state.events
+                                                       .cameras), "%s*$", ""),
                                        "\n")
         if #cameraFiles == #recording.state.events.cameras then
             break
         elseif hs.dialog.blockAlert("Error",
-                                    "The number of camera files in the project directory (" ..
+                                    "The number of files in the camera memory card (" ..
                                         #cameraFiles ..
                                         ") doesn’t match the number of camera events (" ..
                                         #recording.state.events.cameras .. ").",
@@ -413,7 +411,7 @@ function recording.configuration.modal:exited()
         end
     until false
     for index, file in ipairs(cameraFiles) do
-        hs.execute([[mv "]] .. file .. [[" "]] .. projectDirectory ..
+        hs.execute([[cp "]] .. file .. [[" "]] .. projectDirectory ..
                        [[/camera--]] .. index .. [[.mp4"]])
     end
 
