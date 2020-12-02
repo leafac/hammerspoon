@@ -54,7 +54,8 @@ local recording = {
             template = hs.fs.pathToAbsolute("~/Videos/TEMPLATE")
         },
         frame = {w = 1280, h = 720},
-        overlayPadding = 3
+        overlayPadding = 3,
+        cameraDuration = hs.timer.minutes(27)
     },
     state = nil
 }
@@ -71,20 +72,12 @@ function recording.configuration.modal:entered()
             start = nil,
             stop = nil,
             cameras = {},
-            scenes = {},
+            inputs = {},
             edits = {}
         },
         overlays = nil,
         cameraTimer = nil
     }
-
-    hs.audiodevice.watcher.setCallback(function(event)
-        if event == "dev#" then
-            hs.dialog.blockAlert(
-                "An audio device was connected or disconnected.", "")
-        end
-    end)
-    hs.audiodevice.watcher.start()
 
     hs.application.open("OBS")
     hs.dialog.blockAlert("", "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
@@ -100,6 +93,14 @@ function recording.configuration.modal:entered()
     end):start()
     hs.dialog.blockAlert("", "",
                          "Click me after you have clicked on “Start Recording” in OBS")
+
+    hs.audiodevice.watcher.setCallback(function(event)
+        if event == "dev#" then
+            hs.dialog.blockAlert(
+                "An audio device was connected or disconnected.", "")
+        end
+    end)
+    hs.audiodevice.watcher.start()
 
     recording.state.overlays = {
         [0] = hs.canvas.new({
@@ -139,7 +140,7 @@ function recording.configuration.modal:entered()
     }
 
     recording.startCamera()
-    recording.switchToScene(1)
+    recording.switchToInput(1)
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
@@ -162,31 +163,32 @@ function recording.startCamera()
     if recording.state.cameraTimer ~= nil then
         recording.state.cameraTimer:stop()
     end
-    recording.state.cameraTimer = hs.timer.doAfter(hs.timer.minutes(27),
-                                                   function()
-        hs.fnutils.each(recording.state.overlays, function(overlay)
-            hs.fnutils.each(overlay,
-                            function(element)
-                element.fillColor.red = 1
+    recording.state.cameraTimer = hs.timer.doAfter(
+                                      recording.configuration.cameraDuration,
+                                      function()
+            hs.fnutils.each(recording.state.overlays, function(overlay)
+                hs.fnutils.each(overlay,
+                                function(element)
+                    element.fillColor.red = 1
+                end)
             end)
         end)
-    end)
 end
-function recording.switchToScene(scene)
+function recording.switchToInput(input)
     recording.updateEvents(function(time)
-        table.insert(recording.state.events.scenes, {time = time, scene = scene})
+        table.insert(recording.state.events.inputs, {time = time, input = input})
     end)
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:hide() end)
-    local overlay = recording.state.overlays[scene]
+    local overlay = recording.state.overlays[input]
     if overlay ~= nil then overlay:show() end
 end
 recording.configuration.modal:bind(recording.configuration.modifiers, "Z",
-                                   function() recording.switchToScene(1) end)
+                                   function() recording.switchToInput(1) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "A",
-                                   function() recording.switchToScene(0) end)
+                                   function() recording.switchToInput(0) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "Q",
-                                   function() recording.switchToScene(2) end)
+                                   function() recording.switchToInput(2) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "S",
                                    function()
     hs.window.focusedWindow():move({
@@ -262,12 +264,12 @@ function recording.configuration.modal:exited()
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
 
+    hs.audiodevice.watcher.stop()
+
     hs.application.open("OBS")
     hs.dialog.blockAlert("", "",
                          "Click me after you have clicked on “Stop Recording” in OBS")
     hs.application.open("OBS"):kill()
-
-    hs.audiodevice.watcher.stop()
 
     hs.screen.primaryScreen():setMode(1280, 800, 2)
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
@@ -291,6 +293,8 @@ function recording.configuration.modal:exited()
     hs.execute([[mkdir "]] .. projectDirectory .. [["]])
     hs.execute([[cp "]] .. recording.configuration.paths.template ..
                    [[/rounded-corners.png" "]] .. projectDirectory .. [[/"]])
+    hs.execute([[mv "]] .. recording.configuration.paths.videos ..
+                   [[/events.json" "]] .. projectDirectory .. [[/"]])
 
     local templateFileHandle = io.open(
                                    recording.configuration.paths.template ..
@@ -325,18 +329,18 @@ function recording.configuration.modal:exited()
                               "%0\n" .. table.concat(cameraItems, "\n"))
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(cameraMarkers, "\n") .. "\n%0")
-    local sceneItems = {}
-    for index, scene in ipairs(recording.state.events.cameras) do
-        table.insert(sceneItems, [[
+    local inputItems = {}
+    for index, input in ipairs(recording.state.events.cameras) do
+        table.insert(inputItems, [[
             <ITEM
-                NAME ]] .. scene.scene .. [[
+                NAME ]] .. input.input .. [[
 
-                POSITION ]] .. (scene.start - recording.state.events.start) ..
+                POSITION ]] .. (input.start - recording.state.events.start) ..
                          [[
 
-                LENGTH ]] .. ((index < #recording.state.events.scenes and
-                         recording.state.events.scenes[index + 1].start or
-                         recording.state.events.stop) - scene.start) .. [[
+                LENGTH ]] .. ((index < #recording.state.events.inputs and
+                         recording.state.events.inputs[index + 1].start or
+                         recording.state.events.stop) - input.start) .. [[
 
                 <SOURCE VIDEOEFFECT
                     <CODE
@@ -346,7 +350,7 @@ function recording.configuration.modal:exited()
         ]])
     end
     projectText = string.gsub(projectText, "NAME Video",
-                              "%0\n" .. table.concat(sceneItems, "\n"))
+                              "%0\n" .. table.concat(inputItems, "\n"))
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(
                                   hs.fnutils.map(recording.state.events.edits,
