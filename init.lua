@@ -282,7 +282,8 @@ function recording.configuration.modal:exited()
         if option == "Cancel" then return end
         projectDirectory = recording.configuration.paths.videos .. "/" ..
                                projectName
-        if hs.execute([[ls "]] .. projectDirectory .. [["]]) == "" then
+        if not string.match(projectName, "^%s*$") and
+            hs.execute([[ls "]] .. projectDirectory .. [["]]) == "" then
             break
         elseif hs.dialog.blockAlert("Error", "Project already exists: ‘" ..
                                         projectDirectory .. "’.", "Retry",
