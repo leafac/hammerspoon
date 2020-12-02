@@ -298,6 +298,62 @@ function recording.configuration.modal:exited()
     local projectText = templateFileHandle:read("*all")
     templateFileHandle:close()
 
+    projectText = string.gsub(projectText, "LENGTH %d+", "LENGTH " ..
+                                  (recording.state.events.stop -
+                                      recording.state.events.start))
+    local cameraItems = {}
+    local cameraMakers = {}
+    for index, start in ipairs(recording.state.events.cameras) do
+        table.insert(cameraItems, [[
+            <ITEM
+                POSITION ]] .. (start - recording.state.events.start) .. [[
+
+                LENGTH ]] .. ((index < #recording.state.events.cameras and
+                         recording.state.events.cameras[index + 1] or
+                         recording.state.events.stop) - start) .. [[
+
+                <SOURCE VIDEO
+                    FILE "camera--]] .. index .. [[.mp4"
+                >
+            >
+        ]])
+        table.insert(cameraMakers,
+                     [[MARKER 0 ]] .. (camera - recording.state.events.start) ..
+                         [[ "Camera ]] .. index .. [["]])
+    end
+    projectText = string.gsub(projectText, "NAME Camera",
+                              "%0\n" .. table.concat(cameraItems, "\n"))
+    projectText = string.gsub(projectText, ">%s*$",
+                              table.concat(cameraMarkers, "\n") .. "\n%0")
+    local sceneItems = {}
+    for index, scene in ipairs(recording.state.events.cameras) do
+        table.insert(sceneItems, [[
+            <ITEM
+                NAME ]] .. scene.scene .. [[
+
+                POSITION ]] .. (scene.start - recording.state.events.start) ..
+                         [[
+
+                LENGTH ]] .. ((index < #recording.state.events.scenes and
+                         recording.state.events.scenes[index + 1].start or
+                         recording.state.events.stop) - scene.start) .. [[
+
+                <SOURCE VIDEOEFFECT
+                    <CODE
+                    >
+                >
+            >
+        ]])
+    end
+    projectText = string.gsub(projectText, "NAME Video",
+                              "%0\n" .. table.concat(sceneItems, "\n"))
+    projectText = string.gsub(projectText, ">%s*$",
+                              table.concat(
+                                  hs.fnutils.map(recording.state.events.edits,
+                                                 function(edit)
+            return [[MARKER 0 ]] .. (edit - recording.state.events.start)
+        end), "\n") .. "\n%0")
+
     local projectFileHandle = io.open(projectDirectory .. "/" .. projectName ..
                                           ".RPP", "w")
     projectFileHandle:write(projectText)
@@ -354,7 +410,7 @@ function recording.configuration.modal:exited()
                        [[/camera--]] .. index .. [[.mp4"]])
     end
 
-    -- hs.open(projectFile)
+    hs.open(projectFile)
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
