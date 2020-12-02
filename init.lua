@@ -140,7 +140,7 @@ function recording.configuration.modal:entered()
     }
 
     recording.startCamera()
-    recording.switchToScene(1)
+    recording.switchToScene(2)
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
