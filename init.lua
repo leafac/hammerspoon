@@ -307,7 +307,7 @@ function recording.configuration.modal:exited()
                                       recording.state.events.start))
 
     local cameraItems = {}
-    local cameraMakers = {}
+    local cameraMarkers = {}
     for index, start in ipairs(recording.state.events.cameras) do
         table.insert(cameraItems, [[
             <ITEM
@@ -322,7 +322,7 @@ function recording.configuration.modal:exited()
                 >
             >
         ]])
-        table.insert(cameraMakers,
+        table.insert(cameraMarkers,
                      [[MARKER 0 ]] .. (start - recording.state.events.start) ..
                          [[ "Camera ]] .. index .. [["]])
     end
