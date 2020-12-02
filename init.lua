@@ -59,9 +59,15 @@ local recording = {
     state = nil
 }
 function recording.configuration.modal:entered()
+    local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
+    builtInOutput:setOutputMuted(false)
+    builtInOutput:setOutputVolume(20)
+    hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
+    hs.screen.primaryScreen():setMode(recording.configuration.frame.w,
+                                      recording.configuration.frame.h, 2)
+
     recording.state = {
         overlays = nil,
-        startRecordingTap = nil,
         events = {
             start = nil,
             stop = nil,
@@ -72,10 +78,6 @@ function recording.configuration.modal:entered()
         cameraTimer = nil
     }
 
-    local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
-    builtInOutput:setOutputMuted(false)
-    builtInOutput:setOutputVolume(20)
-    hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
             hs.dialog.blockAlert(
@@ -84,8 +86,6 @@ function recording.configuration.modal:entered()
     end)
     hs.audiodevice.watcher.start()
 
-    hs.screen.primaryScreen():setMode(recording.configuration.frame.w,
-                                      recording.configuration.frame.h, 2)
     recording.state.overlays = {
         [0] = hs.canvas.new({
             x = 0,
@@ -125,19 +125,21 @@ function recording.configuration.modal:entered()
 
     hs.application.open("OBS")
     hs.dialog.blockAlert("", "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
-                         "Click me when your next click will be to “Start Recording” in OBS and on the camera at the same time")
-    recording.state.startRecordingTap = hs.eventtap.new(
-                                            {
-            hs.eventtap.event.types.leftMouseUp
-        }, function()
-            recording.state.startRecordingTap:stop()
-            hs.alert("“Start Recording” captured")
-            recording.updateEvents(function(time)
-                recording.state.events.start = time
-            end)
-            recording.startCamera()
-            recording.switchToScene(1)
-        end):start()
+                         "Click me when your next click will be to “Start Recording” in OBS")
+    local startRecordingTap
+    startRecordingTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp},
+                                        function()
+        recording.updateEvents(function(time)
+            recording.state.events.start = time
+        end)
+        startRecordingTap:stop()
+        hs.alert("“Start Recording” captured")
+    end):start()
+    hs.dialog.blockAlert("", "",
+                         "Click me after you have clicked on “Start Recording” in OBS")
+
+    recording.startCamera()
+    recording.switchToScene(1)
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
@@ -146,9 +148,12 @@ function recording.updateEvents(updater)
                   true)
 end
 function recording.startCamera()
+    hs.dialog.blockAlert("💻 🎥", "",
+                         "Click me right as you start recording on the camera")
     recording.updateEvents(function(time)
         table.insert(recording.state.events.cameras, time)
     end)
+    hs.alert("👏")
     hs.fnutils.each(recording.state.overlays, function(overlay)
         hs.fnutils.each(overlay, function(element)
             element.fillColor.red = 0
@@ -166,7 +171,6 @@ function recording.startCamera()
             end)
         end)
     end)
-    hs.dialog.blockAlert("💻 🎥 👏", "")
 end
 function recording.switchToScene(scene)
     recording.updateEvents(function(time)
@@ -242,13 +246,11 @@ recording.configuration.modal:bind(modifiers, "return", function()
     if option == "Yes" then hs.reload() end
 end)
 recording.configuration.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("", "",
-                                        "Click me right as you restart recording on the camera",
-                                        "Click me after you have clicked on “Stop Recording” in OBS and on the camera at the same time")
-    if option == "Click me right as you restart recording on the camera" then
+    local option = hs.dialog.blockAlert("Stop recording on the camera.", "",
+                                        "Continue Recording", "Stop Recording")
+    if option == "Continue Recording" then
         recording.startCamera()
-    elseif option ==
-        "Click me after you have clicked on “Stop Recording” in OBS and on the camera at the same time" then
+    elseif option == "Stop Recording" then
         recording.configuration.modal:exit()
     end
 end)
@@ -257,13 +259,17 @@ function recording.configuration.modal:exited()
 
     recording.state.cameraTimer:stop()
 
-    hs.application.open("OBS"):kill()
-
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
-    hs.screen.primaryScreen():setMode(1280, 800, 2)
+
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("", "",
+                         "Click me after you have clicked on “Stop Recording” in OBS")
+    hs.application.open("OBS"):kill()
 
     hs.audiodevice.watcher.stop()
+
+    hs.screen.primaryScreen():setMode(1280, 800, 2)
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
     -- local _, projectName = hs.dialog.textPrompt("Project Name:", "", "",
