@@ -61,6 +61,7 @@ local recording = {
 function recording.configuration.modal:entered()
     recording.state = {
         overlays = nil,
+        startRecordingTap = nil,
         events = {
             start = nil,
             stop = nil,
@@ -125,22 +126,24 @@ function recording.configuration.modal:entered()
     hs.application.open("OBS")
     hs.dialog.blockAlert("", "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
                          "Click me when your next click will be to “Start Recording” in OBS and on the camera at the same time")
-    local startRecordingTap
-    startRecordingTap = hs.eventtap({hs.eventtap.event.types.leftMouseDown},
-                                    function()
-        startRecordingTap:stop()
-        hs.alert("“Start Recording” captured")
-        recording.updateEvents(function(time)
-            recording.state.events.start = time
-        end)
-        recording.startCamera()
-        recording.switchToScene(1)
-    end):start()
+    recording.state.startRecordingTap = hs.eventtap.new(
+                                            {
+            hs.eventtap.event.types.leftMouseUp
+        }, function()
+            recording.state.startRecordingTap:stop()
+            hs.alert("“Start Recording” captured")
+            recording.updateEvents(function(time)
+                recording.state.events.start = time
+            end)
+            recording.startCamera()
+            recording.switchToScene(1)
+        end):start()
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
     hs.json.write(recording.state.events,
-                  recording.configuration.paths.videos .. "/events.json")
+                  recording.configuration.paths.videos .. "/events.json", true,
+                  true)
 end
 function recording.startCamera()
     recording.updateEvents(function(time)
@@ -175,11 +178,11 @@ function recording.switchToScene(scene)
     if overlay ~= nil then overlay:show() end
 end
 recording.configuration.modal:bind(recording.configuration.modifiers, "Z",
-                                   function() recording.scenes.switch(1) end)
+                                   function() recording.switchToScene(1) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "A",
-                                   function() recording.scenes.switch(0) end)
+                                   function() recording.switchToScene(0) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "Q",
-                                   function() recording.scenes.switch(2) end)
+                                   function() recording.switchToScene(2) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "S",
                                    function()
     hs.window.focusedWindow():move({
