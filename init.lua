@@ -72,7 +72,7 @@ function recording.configuration.modal:entered()
             start = nil,
             stop = nil,
             cameras = {},
-            tracks = {},
+            scenes = {},
             edits = {}
         },
         overlays = nil,
@@ -103,7 +103,7 @@ function recording.configuration.modal:entered()
     hs.audiodevice.watcher.start()
 
     recording.state.overlays = {
-        [0] = hs.canvas.new({
+        [1] = hs.canvas.new({
             x = 0,
             y = 0,
             w = recording.configuration.frame.w,
@@ -127,7 +127,7 @@ function recording.configuration.modal:entered()
                 yRadius = roundedCornerRadius
             }
         }):behavior({"canJoinAllSpaces", "stationary"}),
-        [1] = hs.canvas.new({
+        [2] = hs.canvas.new({
             x = 0,
             y = 0,
             w = recording.configuration.frame.w,
@@ -140,7 +140,7 @@ function recording.configuration.modal:entered()
     }
 
     recording.startCamera()
-    recording.switchToTrack(1)
+    recording.switchToScene(1)
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
@@ -174,21 +174,21 @@ function recording.startCamera()
             end)
         end)
 end
-function recording.switchToTrack(track)
+function recording.switchToScene(scene)
     recording.updateEvents(function(time)
-        table.insert(recording.state.events.tracks, {time = time, track = track})
+        table.insert(recording.state.events.scenes, {time = time, scene = scene})
     end)
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:hide() end)
-    local overlay = recording.state.overlays[track]
+    local overlay = recording.state.overlays[scene]
     if overlay ~= nil then overlay:show() end
 end
 recording.configuration.modal:bind(recording.configuration.modifiers, "Z",
-                                   function() recording.switchToTrack(1) end)
+                                   function() recording.switchToScene(2) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "A",
-                                   function() recording.switchToTrack(0) end)
+                                   function() recording.switchToScene(1) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "Q",
-                                   function() recording.switchToTrack(2) end)
+                                   function() recording.switchToScene(3) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "S",
                                    function()
     hs.window.focusedWindow():move({
@@ -329,18 +329,18 @@ function recording.configuration.modal:exited()
                               "%0\n" .. table.concat(cameraItems, "\n"))
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(cameraMarkers, "\n") .. "\n%0")
-    local trackItems = {}
-    for index, track in ipairs(recording.state.events.cameras) do
-        table.insert(trackItems, [[
+    local sceneItems = {}
+    for index, scene in ipairs(recording.state.events.cameras) do
+        table.insert(sceneItems, [[
             <ITEM
-                NAME ]] .. track.track .. [[
+                NAME ]] .. scene.scene .. [[
 
-                POSITION ]] .. (track.start - recording.state.events.start) ..
+                POSITION ]] .. (scene.start - recording.state.events.start) ..
                          [[
 
-                LENGTH ]] .. ((index < #recording.state.events.tracks and
-                         recording.state.events.tracks[index + 1].start or
-                         recording.state.events.stop) - track.start) .. [[
+                LENGTH ]] .. ((index < #recording.state.events.scenes and
+                         recording.state.events.scenes[index + 1].start or
+                         recording.state.events.stop) - scene.start) .. [[
 
                 <SOURCE VIDEOEFFECT
                     <CODE
@@ -350,7 +350,7 @@ function recording.configuration.modal:exited()
         ]])
     end
     projectText = string.gsub(projectText, "NAME Video",
-                              "%0\n" .. table.concat(trackItems, "\n"))
+                              "%0\n" .. table.concat(sceneItems, "\n"))
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(
                                   hs.fnutils.map(recording.state.events.edits,
