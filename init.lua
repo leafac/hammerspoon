@@ -61,7 +61,13 @@ local recording = {
 function recording.configuration.modal:entered()
     recording.state = {
         overlays = nil,
-        events = {start = nil, stop = nil, camera = {}, scenes = {}, edits = {}},
+        events = {
+            start = nil,
+            stop = nil,
+            cameras = {},
+            scenes = {},
+            edits = {}
+        },
         cameraTimer = nil
     }
 
@@ -80,7 +86,7 @@ function recording.configuration.modal:entered()
     hs.screen.primaryScreen():setMode(recording.configuration.frame.w,
                                       recording.configuration.frame.h, 2)
     recording.state.overlays = {
-        [1] = hs.canvas.new({
+        [0] = hs.canvas.new({
             x = 0,
             y = 0,
             w = recording.configuration.frame.w,
@@ -104,7 +110,7 @@ function recording.configuration.modal:entered()
                 yRadius = roundedCornerRadius
             }
         }):behavior({"canJoinAllSpaces", "stationary"}),
-        [2] = hs.canvas.new({
+        [1] = hs.canvas.new({
             x = 0,
             y = 0,
             w = recording.configuration.frame.w,
@@ -117,64 +123,63 @@ function recording.configuration.modal:entered()
     }
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("", "🚪 🪟 💡 🎧 🎤 🔈 💻 🎥",
+    hs.dialog.blockAlert("", "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
                          "Click me when your next click will be to “Start Recording” in OBS and on the camera at the same time")
     local startRecordingTap
-    startRecordingTap = hs.eventtap({hs.eventtap.event.types.leftMouseDown}, function()
+    startRecordingTap = hs.eventtap({hs.eventtap.event.types.leftMouseDown},
+                                    function()
         startRecordingTap:stop()
         hs.alert("“Start Recording” captured")
         recording.updateEvents(function(time)
             recording.state.events.start = time
         end)
-        recording.startCameraTimer()
-        recording.scenes.switch(1)
+        recording.startCamera()
+        recording.switchToScene(1)
     end):start()
-end
-function recording.startCameraTimer()
-    hs.dialog.blockAlert("💻 🎥 👏", tostring(
-                             hs.timer.secondsSinceEpoch() -
-                                 recording.state.events.start))
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
     hs.json.write(recording.state.events,
                   recording.configuration.paths.videos .. "/events.json")
 end
-function recording.scenes.start()
-    hs.fnutils.each(recording.state.overlays, function(overlay)
-        for _, element in pairs(overlay) do element.fillColor.red = 0 end
+function recording.startCamera()
+    recording.updateEvents(function(time)
+        table.insert(recording.state.events.cameras, time)
     end)
-    if recording.scenes.timer ~= nil then recording.scenes.timer:stop() end
-    recording.scenes.timer = hs.timer.doAfter(hs.timer.minutes(27), function()
-        hs.fnutils.each(recording.state.overlays, function(overlay)
-            for _, element in pairs(overlay) do
-                element.fillColor.red = 1
-            end
+    hs.fnutils.each(recording.state.overlays, function(overlay)
+        hs.fnutils.each(overlay, function(element)
+            element.fillColor.red = 0
         end)
     end)
-    hs.application.open("REAPER")
-    hs.dialog.blockAlert("REAPER", "🔴")
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("OBS", "🔴")
-    hs.dialog.blockAlert("🎥 👏", "")
+    if recording.state.cameraTimer ~= nil then
+        recording.state.cameraTimer:stop()
+    end
+    recording.state.cameraTimer = hs.timer.doAfter(hs.timer.minutes(27),
+                                                   function()
+        hs.fnutils.each(recording.state.overlays, function(overlay)
+            hs.fnutils.each(overlay,
+                            function(element)
+                element.fillColor.red = 1
+            end)
+        end)
+    end)
+    hs.dialog.blockAlert("💻 🎥 👏", "")
 end
-function recording.scenes.switch(identifier)
-    hs.http.get("http://localhost:4445/_/" .. ({
-        [1] = "_RSb05e5059d9f46f784496241c368683e104496408",
-        [2] = "_RS5a192aa77f307656aa8b7322aa253f24a28ee6cb",
-        [3] = "_RS166e0af08557fa557a9e1e4938f7b06718daa334"
-    })[identifier])
+function recording.switchToScene(scene)
+    recording.updateEvents(function(time)
+        table.insert(recording.state.events.scenes, {time = time, scene = scene})
+    end)
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:hide() end)
-    local overlay = recording.state.overlays[identifier]
+    local overlay = recording.state.overlays[scene]
     if overlay ~= nil then overlay:show() end
 end
 recording.configuration.modal:bind(recording.configuration.modifiers, "Z",
-                                   function() recording.scenes.switch(2) end)
-recording.configuration.modal:bind(recording.configuration.modifiers, "A",
                                    function() recording.scenes.switch(1) end)
+recording.configuration.modal:bind(recording.configuration.modifiers, "A",
+                                   function() recording.scenes.switch(0) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "Q",
-                                   function() recording.scenes.switch(3) end)
+                                   function() recording.scenes.switch(2) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "S",
                                    function()
     hs.window.focusedWindow():move({
@@ -222,7 +227,9 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "C",
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "space",
                                    function()
-    hs.http.get("http://localhost:4445/_/40157")
+    recording.updateEvents(function(time)
+        table.insert(recording.state.events.edits, time)
+    end)
     hs.alert("✂️")
 end)
 recording.configuration.modal:bind(modifiers, "return", function()
@@ -233,24 +240,33 @@ recording.configuration.modal:bind(modifiers, "return", function()
 end)
 recording.configuration.modal:bind({"⌘", "⇧"}, "2", function()
     local option = hs.dialog.blockAlert("", "",
-                                        "Click me right as you RESTART recording on the camera",
-                                        "Click me right as you STOP recording on the camera")
-    if option == "Click me right as you RESTART recording on the camera" then
-        hs.http.get("http://localhost:4445/_/40157")
-        recording.scenes.start()
-    elseif option == "Click me right as you STOP recording on the camera" then
+                                        "Click me right as you restart recording on the camera",
+                                        "Click me after you have clicked on “Stop Recording” in OBS and on the camera at the same time")
+    if option == "Click me right as you restart recording on the camera" then
+        recording.startCamera()
+    elseif option ==
+        "Click me after you have clicked on “Stop Recording” in OBS and on the camera at the same time" then
         recording.configuration.modal:exit()
     end
 end)
 function recording.configuration.modal:exited()
-    -- recording.state.events = 
-    local _, projectName = hs.dialog.textPrompt("🚪 🪟 💡 🎧 🎤 🎥",
-                                                "Project Name:", "",
+    recording.updateEvents(function(time) recording.state.events.stop = time end)
+
+    recording.state.cameraTimer:stop()
+
+    hs.application.open("OBS"):kill()
+
+    hs.fnutils.each(recording.state.overlays,
+                    function(overlay) overlay:delete() end)
+    hs.screen.primaryScreen():setMode(1280, 800, 2)
+
+    hs.audiodevice.watcher.stop()
+    hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
+
+    local _, projectName = hs.dialog.textPrompt("Project Name:", "", "",
                                                 "Create Project")
-    local projectsDirectory = hs.fs.pathToAbsolute("~/Videos")
     local projectDirectory = projectsDirectory .. "/" .. projectName
     local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
-    local templateDirectory = projectsDirectory .. "/TEMPLATE"
     hs.execute([[mkdir "]] .. projectDirectory .. [["]])
     hs.execute([[cp "]] .. templateDirectory .. [[/TEMPLATE.RPP" "]] ..
                    projectFile .. [["]])
@@ -258,22 +274,6 @@ function recording.configuration.modal:exited()
                    projectDirectory .. [["]])
 
     hs.open(projectFile)
-    hs.dialog.blockAlert("REAPER", "🎤 🔈")
-
-    recording.scenes.timer:stop()
-    hs.fnutils.each(recording.state.overlays,
-                    function(overlay) overlay:delete() end)
-
-    hs.execute([[npx obs-cli StopRecording]], true)
-    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
-                   hs.fs.pathToAbsolute("~/Videos") .. [[\" }']], true)
-    hs.application.open("OBS"):kill()
-    hs.http.get("http://localhost:4445/_/1016")
-    hs.application.open("REAPER")
-
-    hs.screen.primaryScreen():setMode(1280, 800, 2)
-
-    hs.audiodevice.watcher.stop()
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
