@@ -347,6 +347,7 @@ function recording.configuration.modal:exited()
 
                 <SOURCE VIDEOEFFECT
                     <CODE
+                        | 
                     >
                 >
             >
@@ -359,7 +360,8 @@ function recording.configuration.modal:exited()
                               table.concat(
                                   hs.fnutils.map(recording.state.events.edits,
                                                  function(edit)
-            return [[MARKER 0 ]] .. (edit - recording.state.events.start)
+            return [[MARKER 0 ]] ..
+                       (edit - recording.state.events.start .. [[ ""]])
         end), "\n") .. "\n%0")
 
     local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
