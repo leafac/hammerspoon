@@ -347,6 +347,7 @@ function recording.configuration.modal:exited()
                               table.concat(cameraMarkers, "\n") .. "\n%0")
 
     local sceneItems = {}
+    local sceneMarkers = {}
     for index, scene in ipairs(recording.state.events.scenes) do
         table.insert(sceneItems, [[
             <ITEM
@@ -366,9 +367,15 @@ function recording.configuration.modal:exited()
                 >
             >
         ]])
+        table.insert(sceneMarkers,
+                     [[MARKER 0 ]] ..
+                         (scene.start - recording.state.events.start) ..
+                         [[ "Scene ]] .. scene.scene .. [["]])
     end
     projectText = string.gsub(projectText, "NAME Video",
                               "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
+    projectText = string.gsub(projectText, ">%s*$",
+                              table.concat(sceneMarkers, "\n") .. "\n%0")
 
     projectText = string.gsub(projectText, ">%s*$",
                               table.concat(
