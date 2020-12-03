@@ -362,8 +362,8 @@ function recording.configuration.modal:exited()
             return [[MARKER 0 ]] .. (edit - recording.state.events.start)
         end), "\n") .. "\n%0")
 
-    local projectFileHandle = io.open(projectDirectory .. "/" .. projectName ..
-                                          ".RPP", "w")
+    local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
+    local projectFileHandle = io.open(projectFile, "w")
     projectFileHandle:write(projectText)
     projectFileHandle:close()
 
