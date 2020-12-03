@@ -176,7 +176,8 @@ function recording.startCamera()
 end
 function recording.switchToScene(scene)
     recording.updateEvents(function(time)
-        table.insert(recording.state.events.scenes, {time = time, scene = scene})
+        table.insert(recording.state.events.scenes,
+                     {start = time, scene = scene})
     end)
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:hide() end)
