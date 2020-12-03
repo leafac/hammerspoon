@@ -415,7 +415,7 @@ function recording.configuration.modal:exited()
                                                [[ls "]] ..
                                                    recording.configuration.paths
                                                        .camera ..
-                                                   [["MVI_*.MP4 | tail -n ]] ..
+                                                   [["/MVI_*.MP4 | tail -n ]] ..
                                                    #recording.state.events
                                                        .cameras), "%s*$", ""),
                                        "\n")
