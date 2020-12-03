@@ -80,19 +80,24 @@ function recording.configuration.modal:entered()
     }
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                         "Click me when your next click will be to “Start Recording” in OBS")
-    local startRecordingTap
-    startRecordingTap = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp},
-                                        function()
-        recording.updateEvents(function(time)
-            recording.state.events.start = time
-        end)
-        startRecordingTap:stop()
-        hs.alert("“Start Recording” captured")
-    end):start()
-    hs.dialog.blockAlert("", "",
-                         "Click me after you have clicked on “Start Recording” in OBS")
+    repeat
+        hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
+                             "Click me when your next click will be to “Start Recording” in OBS")
+        local startRecordingTap
+        startRecordingTap = hs.eventtap.new(
+                                {hs.eventtap.event.types.leftMouseUp},
+                                function()
+                recording.updateEvents(function(time)
+                    recording.state.events.start = time
+                end)
+                startRecordingTap:stop()
+                hs.alert("“Start Recording” captured")
+            end):start()
+    until hs.dialog.blockAlert("", "",
+                               "Click me after you have clicked on “Start Recording” in OBS",
+                               "Retry") ==
+        "Click me after you have clicked on “Start Recording” in OBS"
+    hs.application.open("OBS"):mainWindow():minimize()
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
