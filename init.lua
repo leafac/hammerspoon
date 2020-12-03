@@ -41,8 +41,8 @@ hs.hotkey.bind(modifiers, "S", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 2 / 2, h = 2 / 2})
 end)
 hs.hotkey.bind(modifiers, "tab", function()
-    hs.window.focusedWindow():moveToScreen(
-        hs.window.focusedWindow():screen():next())
+    local window = hs.window.focusedWindow()
+    window:moveToScreen(window:screen():next())
 end)
 
 local recording = {
@@ -51,9 +51,13 @@ local recording = {
         modifiers = hs.fnutils.concat({"⌘"}, modifiers),
         paths = {
             videos = hs.fs.pathToAbsolute("~/Videos"),
-            template = hs.fs.pathToAbsolute("~/Videos/TEMPLATE")
+            template = hs.fs.pathToAbsolute("~/Videos/TEMPLATE"),
+            camera = "/Volumes/EOS_DIGITAL/DCIM/100CANON"
         },
-        frame = {w = 1280, h = 720},
+        frames = {
+            recording = {w = 1280, h = 720, scale = 2},
+            regular = {w = 1280, h = 800, scale = 2}
+        },
         overlayPadding = 3,
         cameraDuration = hs.timer.minutes(27)
     },
@@ -64,8 +68,10 @@ function recording.configuration.modal:entered()
     builtInOutput:setOutputMuted(false)
     builtInOutput:setOutputVolume(20)
     hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
-    hs.screen.primaryScreen():setMode(recording.configuration.frame.w,
-                                      recording.configuration.frame.h, 2)
+    hs.screen.primaryScreen():setMode(
+        recording.configuration.frames.recording.w,
+        recording.configuration.frames.recording.h,
+        recording.configuration.frames.recording.scale)
 
     recording.state = {
         events = {
@@ -111,19 +117,19 @@ function recording.configuration.modal:entered()
         [1] = hs.canvas.new({
             x = 0,
             y = 0,
-            w = recording.configuration.frame.w,
-            h = recording.configuration.frame.h
+            w = recording.configuration.frames.recording.w,
+            h = recording.configuration.frames.recording.h
         }):appendElements({
             type = "rectangle",
             action = "fill",
             frame = {
-                x = recording.configuration.frame.w * 3 / 4 +
+                x = recording.configuration.frames.recording.w * 3 / 4 +
                     recording.configuration.overlayPadding,
-                y = recording.configuration.frame.h * 0 / 4 +
+                y = recording.configuration.frames.recording.h * 0 / 4 +
                     recording.configuration.overlayPadding,
-                w = recording.configuration.frame.w * 1 / 4 -
+                w = recording.configuration.frames.recording.w * 1 / 4 -
                     recording.configuration.overlayPadding * 2,
-                h = recording.configuration.frame.h * 1 / 4 -
+                h = recording.configuration.frames.recording.h * 1 / 4 -
                     recording.configuration.overlayPadding * 2
             },
             fillColor = {alpha = 0.5},
@@ -135,8 +141,8 @@ function recording.configuration.modal:entered()
         [2] = hs.canvas.new({
             x = 0,
             y = 0,
-            w = recording.configuration.frame.w,
-            h = recording.configuration.frame.h
+            w = recording.configuration.frames.recording.w,
+            h = recording.configuration.frames.recording.h
         }):appendElements({
             type = "rectangle",
             action = "fill",
@@ -198,46 +204,46 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "Q",
 recording.configuration.modal:bind(recording.configuration.modifiers, "S",
                                    function()
     hs.window.focusedWindow():move({
-        x = 0 / 4 * recording.configuration.frame.w,
-        y = 0 / 4 * recording.configuration.frame.h,
-        w = 3 / 4 * recording.configuration.frame.w,
-        h = 4 / 4 * recording.configuration.frame.h
+        x = 0 / 4 * recording.configuration.frames.recording.w,
+        y = 0 / 4 * recording.configuration.frames.recording.h,
+        w = 3 / 4 * recording.configuration.frames.recording.w,
+        h = 4 / 4 * recording.configuration.frames.recording.h
     })
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "X",
                                    function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frame.w,
-        y = 1 / 4 * recording.configuration.frame.h,
-        w = 1 / 4 * recording.configuration.frame.w,
-        h = 3 / 4 * recording.configuration.frame.h
+        x = 3 / 4 * recording.configuration.frames.recording.w,
+        y = 1 / 4 * recording.configuration.frames.recording.h,
+        w = 1 / 4 * recording.configuration.frames.recording.w,
+        h = 3 / 4 * recording.configuration.frames.recording.h
     })
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "E",
                                    function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frame.w,
-        y = 1 / 4 * recording.configuration.frame.h,
-        w = 1 / 4 * recording.configuration.frame.w,
-        h = 1 / 4 * recording.configuration.frame.h
+        x = 3 / 4 * recording.configuration.frames.recording.w,
+        y = 1 / 4 * recording.configuration.frames.recording.h,
+        w = 1 / 4 * recording.configuration.frames.recording.w,
+        h = 1 / 4 * recording.configuration.frames.recording.h
     })
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "D",
                                    function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frame.w,
-        y = 2 / 4 * recording.configuration.frame.h,
-        w = 1 / 4 * recording.configuration.frame.w,
-        h = 1 / 4 * recording.configuration.frame.h
+        x = 3 / 4 * recording.configuration.frames.recording.w,
+        y = 2 / 4 * recording.configuration.frames.recording.h,
+        w = 1 / 4 * recording.configuration.frames.recording.w,
+        h = 1 / 4 * recording.configuration.frames.recording.h
     })
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "C",
                                    function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frame.w,
-        y = 3 / 4 * recording.configuration.frame.h,
-        w = 1 / 4 * recording.configuration.frame.w,
-        h = 1 / 4 * recording.configuration.frame.h
+        x = 3 / 4 * recording.configuration.frames.recording.w,
+        y = 3 / 4 * recording.configuration.frames.recording.h,
+        w = 1 / 4 * recording.configuration.frames.recording.w,
+        h = 1 / 4 * recording.configuration.frames.recording.h
     })
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "space",
@@ -277,7 +283,10 @@ function recording.configuration.modal:exited()
                          "Click me after you have clicked on “Stop Recording” in OBS")
     hs.application.open("OBS"):kill()
 
-    hs.screen.primaryScreen():setMode(1280, 800, 2)
+    hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
+                                      recording.configuration.frames.regular.h,
+                                      recording.configuration.frames.regular
+                                          .scale)
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
     local projectName, projectDirectory
@@ -400,17 +409,20 @@ function recording.configuration.modal:exited()
     local cameraFiles
     repeat
         hs.dialog.blockAlert("", "",
-                             "Click me after having connected the camera memory card")
+                             "Click me after having connected the camera SD card")
         cameraFiles = hs.fnutils.split(string.gsub(
                                            hs.execute(
-                                               [[ls "/Volumes/EOS_DIGITAL/DCIM/100CANON/"MVI_*.MP4 | tail -n ]] ..
+                                               [[ls "]] ..
+                                                   recording.configuration.paths
+                                                       .camera ..
+                                                   [["MVI_*.MP4 | tail -n ]] ..
                                                    #recording.state.events
                                                        .cameras), "%s*$", ""),
                                        "\n")
         if #cameraFiles == #recording.state.events.cameras then
             break
         elseif hs.dialog.blockAlert("Error",
-                                    "The number of files in the camera memory card (" ..
+                                    "The number of files in the camera SD card (" ..
                                         #cameraFiles ..
                                         ") doesn’t match the number of camera events (" ..
                                         #recording.state.events.cameras .. ").",
