@@ -263,8 +263,8 @@ function recording.configuration.modal:exited()
                     function(overlay) overlay:delete() end)
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert(
-        "Click on “Stop Recording” in OBS and then click me")
+    hs.dialog.blockAlert("", "",
+                         "Click on “Stop Recording” in OBS and then click me")
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
@@ -274,7 +274,7 @@ function recording.configuration.modal:exited()
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
     ::projectPrompt::
-    local option, projectName = hs.dialog.textPrompt("", "Name:", "",
+    local option, projectName = hs.dialog.textPrompt("Name:", "", "",
                                                      "Create Project", "Cancel")
     if option == "Cancel" then return end
     local projectDirectory = recording.configuration.paths.videos .. "/" ..
@@ -385,9 +385,9 @@ function recording.configuration.modal:exited()
                                       "")
     if recordingFile == "" then
         local option = hs.dialog.blockAlert("Error",
-                                            [[Failed to find recording file: ‘]] ..
+                                            "Failed to find recording file: ‘" ..
                                                 recording.configuration.paths
-                                                    .videos .. [[/*.mkv’.]],
+                                                    .videos .. "/*.mkv’.",
                                             "Retry", "Cancel")
         if option == "Retry" then
             goto beforeRecordingFile
@@ -403,8 +403,7 @@ function recording.configuration.modal:exited()
                    [[/computer.wav" && mv "]] .. recordingFile .. [[" ~/.Trash]])
     ::afterRecordingFile::
 
-    hs.dialog.blockAlert("", "",
-                         "Connected the camera SD card and then click me")
+    hs.dialog.blockAlert("", "", "Connect the camera SD card and then click me")
     ::beforeCameraFiles::
     local cameraFiles = hs.fnutils.split(
                             string.gsub(hs.execute(
@@ -418,7 +417,7 @@ function recording.configuration.modal:exited()
         local option = hs.dialog.blockAlert("Error",
                                             "The number of files in the camera SD card (" ..
                                                 #cameraFiles ..
-                                                ") doesn’t match the number of camera events (" ..
+                                                ") is different from the number of camera events (" ..
                                                 #recording.state.events.cameras ..
                                                 ").", "Retry", "Cancel")
         if option == "Retry" then
