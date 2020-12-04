@@ -128,8 +128,7 @@ function recording.configuration.modal:entered()
     recording.state.name = select(2,
                                   hs.dialog.textPrompt(
                                       "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
-                                      "Name:", "",
-                                      "Click me as you start recording on the camera"))
+                                      "Name:", "", "Start recording in OBS"))
     recording.state.paths.directory = recording.configuration.paths.videos ..
                                           "/" .. recording.state.name
     recording.state.paths.project = recording.state.paths.directory .. "/" ..
@@ -140,13 +139,15 @@ function recording.configuration.modal:entered()
         goto projectPrompt
     end
 
-    hs.application.open("OBS"):mainWindow():minimize()
+    recording.updateEvents(
+        function(time) recording.state.events.start = time end)
     hs.execute([[mkdir "]] .. recording.state.paths.directory .. [["]])
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
                    recording.state.paths.directory .. [[\" }']], true)
     hs.execute([[npx obs-cli StartRecording]], true)
-    recording.updateEvents(
-        function(time) recording.state.events.start = time end)
+    hs.application.open("OBS"):mainWindow():minimize()
+    hs.dialog
+        .blockAlert("", "", "Click me as you start recording on the camera")
     recording.startCamera()
     recording.switchToScene(2)
 
