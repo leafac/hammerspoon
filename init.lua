@@ -309,9 +309,12 @@ function recording.configuration.modal:exited()
             <ITEM
                 POSITION ]] .. recording.timeAbsoluteToRelative(start) .. [[
 
-                LENGTH ]] .. ((index < #recording.state.events.cameras and
-                         recording.state.events.cameras[index + 1] or
-                         recording.state.events.stop) - start) .. [[
+                LENGTH ]] ..
+                         (recording.timeAbsoluteToRelative(
+                             index < #recording.state.events.cameras and
+                                 recording.state.events.cameras[index + 1] or
+                                 recording.state.events.stop) -
+                             recording.timeAbsoluteToRelative(start)) .. [[
 
                 <SOURCE VIDEO
                     FILE "camera--]] .. index .. [[.mp4"
@@ -333,9 +336,13 @@ function recording.configuration.modal:exited()
                 POSITION ]] .. recording.timeAbsoluteToRelative(scene.start) ..
                          [[
 
-                LENGTH ]] .. ((index < #recording.state.events.scenes and
-                         recording.state.events.scenes[index + 1].start or
-                         recording.state.events.stop) - scene.start) .. [[
+                LENGTH ]] ..
+                         (recording.timeAbsoluteToRelative(
+                             index < #recording.state.events.scenes and
+                                 recording.state.events.scenes[index + 1].start or
+                                 recording.state.events.stop) -
+                             recording.timeAbsoluteToRelative(scene.start)) ..
+                         [[
 
                 <SOURCE VIDEOEFFECT
                     <CODE
