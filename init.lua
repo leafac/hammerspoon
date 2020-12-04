@@ -76,7 +76,6 @@ function recording.configuration.modal:entered()
         recording.configuration.frames.recording.scale)
 
     recording.state = {
-        name = nil,
         events = {
             start = nil,
             stop = nil,
