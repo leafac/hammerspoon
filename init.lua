@@ -51,6 +51,7 @@ local recording = {
         modifiers = hs.fnutils.concat({"⌘"}, modifiers),
         paths = {
             videos = hs.fs.pathToAbsolute("~/Videos"),
+            events = hs.fs.pathToAbsolute("~/Videos") .. "/events.json",
             template = hs.fs.pathToAbsolute("~/Videos/TEMPLATE"),
             camera = "/Volumes/EOS_DIGITAL/DCIM/100CANON"
         },
@@ -76,7 +77,6 @@ function recording.configuration.modal:entered()
 
     recording.state = {
         name = nil,
-        paths = {directory = nil, project = nil},
         events = {
             start = nil,
             stop = nil,
@@ -123,33 +123,14 @@ function recording.configuration.modal:entered()
         cameraTimer = nil
     }
 
-    hs.application.open("OBS")
-    ::projectPrompt::
-    recording.state.name = select(2,
-                                  hs.dialog.textPrompt(
-                                      "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
-                                      "Name:", "", "Start Recording in OBS"))
-    recording.state.paths.directory = recording.configuration.paths.videos ..
-                                          "/" .. recording.state.name
-    recording.state.paths.project = recording.state.paths.directory .. "/" ..
-                                        recording.state.name .. ".RPP"
-    if hs.execute([[ls "]] .. recording.state.paths.directory .. [["]]) ~= "" then
-        hs.dialog.blockAlert("Error", "Directory already exists: ‘" ..
-                                 recording.state.paths.directory .. "’.")
-        goto projectPrompt
-    end
-
     recording.updateEvents(
         function(time) recording.state.events.start = time end)
-    hs.execute([[mkdir "]] .. recording.state.paths.directory .. [["]])
-    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
-                   recording.state.paths.directory .. [[\" }']], true)
-    hs.execute([[npx obs-cli StartRecording]], true)
-    hs.application.open("OBS"):mainWindow():minimize()
-    hs.dialog
-        .blockAlert("", "", "Click me as you start recording on the camera")
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
+                         "Click on “Start Recording” in OBS and then click me as you start recording on the camera")
     recording.startCamera()
     recording.switchToScene(2)
+    hs.application.open("OBS"):mainWindow():minimize()
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
@@ -161,8 +142,8 @@ function recording.configuration.modal:entered()
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
-    hs.json.write(recording.state.events,
-                  recording.state.paths.directory .. "/events.json", true, true)
+    hs.json.write(recording.state.events, recording.configuration.paths.events,
+                  true, true)
 end
 function recording.startCamera()
     recording.updateEvents(function(time)
@@ -281,9 +262,9 @@ function recording.configuration.modal:exited()
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
 
-    hs.execute([[npx obs-cli StopRecording]], true)
-    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
-                   recording.configuration.paths.videos .. [[\" }']], true)
+    hs.application.open("OBS")
+    hs.dialog.blockAlert(
+        "Click on “Stop Recording” in OBS and then click me")
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
@@ -292,15 +273,30 @@ function recording.configuration.modal:exited()
                                           .scale)
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
+    ::projectPrompt::
+    local option, projectName = hs.dialog.textPrompt("", "Name:", "",
+                                                     "Create Project", "Cancel")
+    if option == "Cancel" then return end
+    local projectDirectory = recording.configuration.paths.videos .. "/" ..
+                                 projectName
+    local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
+    if hs.execute([[ls "]] .. projectDirectory .. [["]]) ~= "" then
+        hs.dialog.blockAlert("Error", "Directory already exists: ‘" ..
+                                 projectDirectory .. "’.")
+        goto projectPrompt
+    end
+
+    hs.execute([[mkdir "]] .. projectDirectory .. [["]])
+
     local templateFileHandle = io.open(
                                    recording.configuration.paths.template ..
                                        "/TEMPLATE.RPP", "r")
-    local project = templateFileHandle:read("*all")
+    local projectRPP = templateFileHandle:read("*all")
     templateFileHandle:close()
 
-    project = string.gsub(project, "LENGTH %d+", "LENGTH " ..
-                              recording.timeAbsoluteToRelative(
-                                  recording.state.events.stop))
+    projectRPP = string.gsub(projectRPP, "LENGTH %d+", "LENGTH " ..
+                                 recording.timeAbsoluteToRelative(
+                                     recording.state.events.stop))
 
     local markers = {}
 
@@ -325,8 +321,8 @@ function recording.configuration.modal:exited()
         table.insert(markers,
                      {position = start, description = [[Camera ]] .. index})
     end
-    project = string.gsub(project, "NAME Camera",
-                          "%0\n" .. table.concat(cameraItems, "\n") .. "\n")
+    projectRPP = string.gsub(projectRPP, "NAME Camera",
+                             "%0\n" .. table.concat(cameraItems, "\n") .. "\n")
 
     local sceneItems = {}
     for index, scene in ipairs(recording.state.events.scenes) do
@@ -357,44 +353,59 @@ function recording.configuration.modal:exited()
             description = [[Scene ]] .. scene.scene
         })
     end
-    project = string.gsub(project, "NAME Video",
-                          "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
+    projectRPP = string.gsub(projectRPP, "NAME Video",
+                             "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
 
     for _, position in ipairs(recording.state.events.edits) do
         table.insert(markers, {position = position, description = "Edit"})
     end
-    project = string.gsub(project, ">%s*$",
-                          table.concat(hs.fnutils.map(markers, function(marker)
-        return [[MARKER 0 ]] ..
-                   recording.timeAbsoluteToRelative(marker.position) .. [[ "]] ..
-                   marker.description .. [["]]
-    end), "\n") .. "\n%0")
+    projectRPP = string.gsub(projectRPP, ">%s*$",
+                             table.concat(
+                                 hs.fnutils.map(markers, function(marker)
+            return [[MARKER 0 ]] ..
+                       recording.timeAbsoluteToRelative(marker.position) ..
+                       [[ "]] .. marker.description .. [["]]
+        end), "\n") .. "\n%0")
 
-    local projectFileHandle = io.open(recording.state.paths.project, "w")
-    projectFileHandle:write(project)
+    local projectFileHandle = io.open(projectFile, "w")
+    projectFileHandle:write(projectRPP)
     projectFileHandle:close()
 
+    hs.execute([[mv "]] .. recording.configuration.paths.events .. [[" "]] ..
+                   projectDirectory .. [[/"]])
     hs.execute([[cp "]] .. recording.configuration.paths.template ..
-                   [[/rounded-corners.png" "]] ..
-                   recording.state.paths.directory .. [[/"]])
+                   [[/rounded-corners.png" "]] .. projectDirectory .. [[/"]])
 
+    ::beforeRecordingFile::
     local recordingFile = string.gsub(hs.execute(
                                           [[ls "]] ..
-                                              recording.state.paths.directory ..
+                                              recording.configuration.paths
+                                                  .videos ..
                                               [["/*.mkv | tail -n 1]]), "%s*$",
                                       "")
+    if recordingFile == "" then
+        local option = hs.dialog.blockAlert("Error",
+                                            [[Failed to find recording file: ‘]] ..
+                                                recording.configuration.paths
+                                                    .videos .. [[/*.mkv’.]],
+                                            "Retry", "Cancel")
+        if option == "Retry" then
+            goto beforeRecordingFile
+        elseif option == "Cancel" then
+            goto afterRecordingFile
+        end
+    end
     hs.execute([["]] .. recording.configuration.paths.template ..
                    [[/ffmpeg" -i "]] .. recordingFile ..
-                   [[" -map 0:0 -c copy "]] .. recording.state.paths.directory ..
-                   [[/computer.mp4" -map_channel 0.1.0 "]] ..
-                   recording.state.paths.directory ..
-                   [[/microphone.wav" -map 0:2 "]] ..
-                   recording.state.paths.directory .. [[/computer.wav" && mv "]] ..
-                   recordingFile .. [[" ~/.Trash]])
+                   [[" -map 0:0 -c copy "]] .. projectDirectory ..
+                   [[/computer.mp4" -map_channel 0.1.0 "]] .. projectDirectory ..
+                   [[/microphone.wav" -map 0:2 "]] .. projectDirectory ..
+                   [[/computer.wav" && mv "]] .. recordingFile .. [[" ~/.Trash]])
+    ::afterRecordingFile::
 
     hs.dialog.blockAlert("", "",
-                         "Click me after having connected the camera SD card")
-    ::beforeTransferCameraFiles::
+                         "Connected the camera SD card and then click me")
+    ::beforeCameraFiles::
     local cameraFiles = hs.fnutils.split(
                             string.gsub(hs.execute(
                                             [[ls "]] ..
@@ -411,19 +422,18 @@ function recording.configuration.modal:exited()
                                                 #recording.state.events.cameras ..
                                                 ").", "Retry", "Cancel")
         if option == "Retry" then
-            goto beforeTransferCameraFiles
+            goto beforeCameraFiles
         elseif option == "Cancel" then
-            goto afterTransferCameraFiles
+            goto afterCameraFiles
         end
     end
     for index, file in ipairs(cameraFiles) do
-        hs.execute([[cp "]] .. file .. [[" "]] ..
-                       recording.state.paths.directory .. [[/camera--]] .. index ..
-                       [[.mp4"]])
+        hs.execute([[cp "]] .. file .. [[" "]] .. projectDirectory ..
+                       [[/camera--]] .. index .. [[.mp4"]])
     end
-    ::afterTransferCameraFiles::
+    ::afterCameraFiles::
 
-    hs.open(recording.state.paths.project)
+    hs.open(projectFile)
 end
 function recording.timeAbsoluteToRelative(absolute)
     return math.floor((absolute - recording.state.events.start) *
