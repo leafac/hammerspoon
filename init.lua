@@ -86,23 +86,11 @@ function recording.configuration.modal:entered()
     }
 
     hs.application.open("OBS")
-    repeat
-        hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                             "Click me when your next click will be to “Start Recording” in OBS")
-        local startRecordingTap
-        startRecordingTap = hs.eventtap.new(
-                                {hs.eventtap.event.types.leftMouseUp},
-                                function()
-                recording.updateEvents(function(time)
-                    recording.state.events.start = time
-                end)
-                startRecordingTap:stop()
-                hs.alert("“Start Recording” captured")
-            end):start()
-    until hs.dialog.blockAlert("", "",
-                               "Click me after you have clicked on “Start Recording” in OBS",
-                               "Retry") ==
-        "Click me after you have clicked on “Start Recording” in OBS"
+    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
+                         "Click me after you have clicked on “Start Recording” in OBS")
+    recording.updateEvents(
+        function(time) recording.state.events.start = time end)
+    hs.alert("🎬")
     hs.application.open("OBS"):mainWindow():minimize()
 
     hs.audiodevice.watcher.setCallback(function(event)
@@ -409,7 +397,7 @@ function recording.configuration.modal:exited()
     hs.execute([["]] .. recording.configuration.paths.template ..
                    [[/ffmpeg" -i "]] .. recordingFile ..
                    [[" -map 0:0 -c copy "]] .. projectDirectory ..
-                   [[/computer.mp4" -map 0:1 "]] .. projectDirectory ..
+                   [[/computer.mp4" -map_channel 0.1.0 "]] .. projectDirectory ..
                    [[/microphone.wav" -map 0:2 "]] .. projectDirectory ..
                    [[/computer.wav" && mv "]] .. recordingFile .. [[" ~/.Trash]])
 
