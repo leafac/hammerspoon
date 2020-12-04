@@ -427,7 +427,7 @@ function recording.configuration.modal:exited()
 end
 function recording.timeAbsoluteToRelative(absolute)
     return math.floor((absolute - recording.state.events.start) *
-                          recording.configuration.frameRate + 0.5) /
+                          recording.configuration.frameRate) /
                recording.configuration.frameRate
 end
 
