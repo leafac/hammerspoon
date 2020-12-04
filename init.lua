@@ -140,13 +140,13 @@ function recording.configuration.modal:entered()
         goto projectPrompt
     end
 
-    recording.updateEvents(
-        function(time) recording.state.events.start = time end)
     hs.application.open("OBS"):mainWindow():minimize()
     hs.execute([[mkdir "]] .. recording.state.paths.directory .. [["]])
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
                    recording.state.paths.directory .. [[\" }']], true)
     hs.execute([[npx obs-cli StartRecording]], true)
+    recording.updateEvents(
+        function(time) recording.state.events.start = time end)
     recording.startCamera()
     recording.switchToScene(2)
 
