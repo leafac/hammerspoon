@@ -59,7 +59,8 @@ local recording = {
             regular = {w = 1280, h = 800, scale = 2}
         },
         overlayPadding = 3,
-        cameraDuration = hs.timer.minutes(27)
+        cameraDuration = hs.timer.minutes(27),
+        frameRate = 25
     },
     state = nil
 }
@@ -74,6 +75,8 @@ function recording.configuration.modal:entered()
         recording.configuration.frames.recording.scale)
 
     recording.state = {
+        name = nil,
+        paths = {directory = nil, project = nil},
         events = {
             start = nil,
             stop = nil,
@@ -81,17 +84,71 @@ function recording.configuration.modal:entered()
             scenes = {},
             edits = {}
         },
-        overlays = nil,
+        overlays = {
+            [1] = hs.canvas.new({
+                x = 0,
+                y = 0,
+                w = recording.configuration.frames.recording.w,
+                h = recording.configuration.frames.recording.h
+            }):appendElements({
+                type = "rectangle",
+                action = "fill",
+                frame = {
+                    x = recording.configuration.frames.recording.w * 3 / 4 +
+                        recording.configuration.overlayPadding,
+                    y = recording.configuration.frames.recording.h * 0 / 4 +
+                        recording.configuration.overlayPadding,
+                    w = recording.configuration.frames.recording.w * 1 / 4 -
+                        recording.configuration.overlayPadding * 2,
+                    h = recording.configuration.frames.recording.h * 1 / 4 -
+                        recording.configuration.overlayPadding * 2
+                },
+                fillColor = {alpha = 0.5},
+                roundedRectRadii = {
+                    xRadius = roundedCornerRadius,
+                    yRadius = roundedCornerRadius
+                }
+            }):behavior({"canJoinAllSpaces", "stationary"}),
+            [2] = hs.canvas.new({
+                x = 0,
+                y = 0,
+                w = recording.configuration.frames.recording.w,
+                h = recording.configuration.frames.recording.h
+            }):appendElements({
+                type = "rectangle",
+                action = "fill",
+                fillColor = {alpha = 0.5}
+            }):behavior({"canJoinAllSpaces", "stationary"})
+        },
         cameraTimer = nil
     }
 
     hs.application.open("OBS")
-    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                         "Click me after you have clicked on “Start Recording” in OBS")
+    repeat
+        recording.state.name = select(2,
+                                      hs.dialog.textPrompt(
+                                          "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
+                                          "Name:", "",
+                                          "Click me as you start recording on the camera"))
+        recording.state.paths.directory =
+            recording.configuration.paths.videos .. "/" .. recording.state.name
+        recording.state.paths.project =
+            recording.state.paths.directory .. "/" .. recording.state.name ..
+                ".RPP"
+    until hs.execute([[ls "]] .. recording.state.paths.directory .. [["]]) == "" or
+        (hs.dialog.blockAlert("Error", "Directory already exists: ‘" ..
+                                  recording.state.paths.directory .. "’.") and
+            false)
+
     recording.updateEvents(
         function(time) recording.state.events.start = time end)
-    hs.alert("🎬")
     hs.application.open("OBS"):mainWindow():minimize()
+    hs.execute([[mkdir "]] .. recording.state.paths.directory .. [["]])
+    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
+                   recording.state.paths.directory .. [[\" }']])
+    hs.execute([[npx obs-cli StartRecording]])
+    recording.startCamera()
+    recording.switchToScene(2)
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
@@ -100,56 +157,13 @@ function recording.configuration.modal:entered()
         end
     end)
     hs.audiodevice.watcher.start()
-
-    recording.state.overlays = {
-        [1] = hs.canvas.new({
-            x = 0,
-            y = 0,
-            w = recording.configuration.frames.recording.w,
-            h = recording.configuration.frames.recording.h
-        }):appendElements({
-            type = "rectangle",
-            action = "fill",
-            frame = {
-                x = recording.configuration.frames.recording.w * 3 / 4 +
-                    recording.configuration.overlayPadding,
-                y = recording.configuration.frames.recording.h * 0 / 4 +
-                    recording.configuration.overlayPadding,
-                w = recording.configuration.frames.recording.w * 1 / 4 -
-                    recording.configuration.overlayPadding * 2,
-                h = recording.configuration.frames.recording.h * 1 / 4 -
-                    recording.configuration.overlayPadding * 2
-            },
-            fillColor = {alpha = 0.5},
-            roundedRectRadii = {
-                xRadius = roundedCornerRadius,
-                yRadius = roundedCornerRadius
-            }
-        }):behavior({"canJoinAllSpaces", "stationary"}),
-        [2] = hs.canvas.new({
-            x = 0,
-            y = 0,
-            w = recording.configuration.frames.recording.w,
-            h = recording.configuration.frames.recording.h
-        }):appendElements({
-            type = "rectangle",
-            action = "fill",
-            fillColor = {alpha = 0.5}
-        }):behavior({"canJoinAllSpaces", "stationary"})
-    }
-
-    recording.startCamera()
-    recording.switchToScene(2)
 end
 function recording.updateEvents(updater)
     updater(hs.timer.secondsSinceEpoch())
     hs.json.write(recording.state.events,
-                  recording.configuration.paths.videos .. "/events.json", true,
-                  true)
+                  recording.state.paths.directory .. "/events.json", true, true)
 end
 function recording.startCamera()
-    hs.dialog.blockAlert("", "",
-                         "Click me right as you start recording on the camera")
     recording.updateEvents(function(time)
         table.insert(recording.state.events.cameras, time)
     end)
@@ -248,27 +262,27 @@ recording.configuration.modal:bind(modifiers, "return", function()
     if option == "Yes" then hs.reload() end
 end)
 recording.configuration.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("Stop recording on the camera", "",
-                                        "Continue Recording", "Stop Recording")
-    if option == "Continue Recording" then
+    local option = hs.dialog.blockAlert("", "",
+                                        "Click me as you restart recording on the camera",
+                                        "Click me as you stop recording on the camera")
+    if option == "Click me as you restart recording on the camera" then
         recording.startCamera()
-    elseif option == "Stop Recording" then
+    elseif option == "Click me as you stop recording on the camera" then
         recording.configuration.modal:exit()
     end
 end)
 function recording.configuration.modal:exited()
     recording.updateEvents(function(time) recording.state.events.stop = time end)
 
-    recording.state.cameraTimer:stop()
+    hs.audiodevice.watcher.stop()
 
+    recording.state.cameraTimer:stop()
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
 
-    hs.audiodevice.watcher.stop()
-
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("", "",
-                         "Click me after you have clicked on “Stop Recording” in OBS")
+    hs.execute([[npx obs-cli StopRecording]])
+    hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
+                   recording.configuration.paths.videos .. [[\" }']])
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
@@ -277,44 +291,23 @@ function recording.configuration.modal:exited()
                                           .scale)
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
-    local projectName, projectDirectory
-    repeat
-        local option
-        option, projectName = hs.dialog.textPrompt("Project Name:", "", "",
-                                                   "Create Project", "Cancel")
-        if option == "Cancel" then return end
-        projectDirectory = recording.configuration.paths.videos .. "/" ..
-                               projectName
-        if hs.execute([[ls "]] .. projectDirectory .. [["]]) == "" then
-            break
-        elseif hs.dialog.blockAlert("Error", "Project already exists: ‘" ..
-                                        projectDirectory .. "’.", "Retry",
-                                    "Cancel") == "Cancel" then
-            return
-        end
-    until false
-    hs.execute([[mkdir "]] .. projectDirectory .. [["]])
-    hs.execute([[cp "]] .. recording.configuration.paths.template ..
-                   [[/rounded-corners.png" "]] .. projectDirectory .. [[/"]])
-    hs.execute([[mv "]] .. recording.configuration.paths.videos ..
-                   [[/events.json" "]] .. projectDirectory .. [[/"]])
-
     local templateFileHandle = io.open(
                                    recording.configuration.paths.template ..
                                        "/TEMPLATE.RPP", "r")
-    local projectText = templateFileHandle:read("*all")
+    local project = templateFileHandle:read("*all")
     templateFileHandle:close()
 
-    projectText = string.gsub(projectText, "LENGTH %d+", "LENGTH " ..
-                                  (recording.state.events.stop -
-                                      recording.state.events.start))
+    project = string.gsub(project, "LENGTH %d+", "LENGTH " ..
+                              recording.timeAbsoluteToRelative(
+                                  recording.state.events.stop))
+
+    local markers = {}
 
     local cameraItems = {}
-    local cameraMarkers = {}
     for index, start in ipairs(recording.state.events.cameras) do
         table.insert(cameraItems, [[
             <ITEM
-                POSITION ]] .. (start - recording.state.events.start) .. [[
+                POSITION ]] .. recording.timeAbsoluteToRelative(start) .. [[
 
                 LENGTH ]] .. ((index < #recording.state.events.cameras and
                          recording.state.events.cameras[index + 1] or
@@ -325,23 +318,19 @@ function recording.configuration.modal:exited()
                 >
             >
         ]])
-        table.insert(cameraMarkers,
-                     [[MARKER 0 ]] .. (start - recording.state.events.start) ..
-                         [[ "Camera ]] .. index .. [["]])
+        table.insert(markers,
+                     {position = start, description = [[Camera ]] .. index})
     end
-    projectText = string.gsub(projectText, "NAME Camera",
-                              "%0\n" .. table.concat(cameraItems, "\n") .. "\n")
-    projectText = string.gsub(projectText, ">%s*$",
-                              table.concat(cameraMarkers, "\n") .. "\n%0")
+    project = string.gsub(project, "NAME Camera",
+                          "%0\n" .. table.concat(cameraItems, "\n") .. "\n")
 
     local sceneItems = {}
-    local sceneMarkers = {}
     for index, scene in ipairs(recording.state.events.scenes) do
         table.insert(sceneItems, [[
             <ITEM
                 NAME ]] .. scene.scene .. [[
 
-                POSITION ]] .. (scene.start - recording.state.events.start) ..
+                POSITION ]] .. recording.timeAbsoluteToRelative(scene.start) ..
                          [[
 
                 LENGTH ]] .. ((index < #recording.state.events.scenes and
@@ -355,51 +344,45 @@ function recording.configuration.modal:exited()
                 >
             >
         ]])
-        table.insert(sceneMarkers,
-                     [[MARKER 0 ]] ..
-                         (scene.start - recording.state.events.start) ..
-                         [[ "Scene ]] .. scene.scene .. [["]])
+        table.insert(markers, {
+            position = scene.start,
+            description = [[Scene ]] .. scene.scene
+        })
     end
-    projectText = string.gsub(projectText, "NAME Video",
-                              "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
-    projectText = string.gsub(projectText, ">%s*$",
-                              table.concat(sceneMarkers, "\n") .. "\n%0")
+    project = string.gsub(project, "NAME Video",
+                          "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
 
-    projectText = string.gsub(projectText, ">%s*$",
-                              table.concat(
-                                  hs.fnutils.map(recording.state.events.edits,
-                                                 function(edit)
-            return [[MARKER 0 ]] ..
-                       (edit - recording.state.events.start .. [[ ""]])
-        end), "\n") .. "\n%0")
+    for _, position in ipairs(recording.state.events.edits) do
+        table.insert(markers, {position = position, description = "Edit"})
+    end
+    project = string.gsub(project, ">%s*$",
+                          table.concat(hs.fnutils.map(markers, function(marker)
+        return [[MARKER 0 ]] ..
+                   recording.timeAbsoluteToRelative(marker.position) .. [[ "]] ..
+                   marker.description .. [["]]
+    end), "\n") .. "\n%0")
 
-    local projectFile = projectDirectory .. "/" .. projectName .. ".RPP"
-    local projectFileHandle = io.open(projectFile, "w")
-    projectFileHandle:write(projectText)
+    local projectFileHandle = io.open(recording.state.paths.project, "w")
+    projectFileHandle:write(project)
     projectFileHandle:close()
 
-    local recordingFile
-    repeat
-        recordingFile = string.gsub(hs.execute(
-                                        [[ls "]] ..
-                                            recording.configuration.paths.videos ..
-                                            [["/*.mkv | tail -n 1]]), "%s*$", "")
-        if recordingFile ~= "" then
-            break
-        elseif hs.dialog.blockAlert("Error",
-                                    "No recording file: ‘" ..
-                                        recording.configuration.paths.videos ..
-                                        "/*.mkv’.", "Retry", "Cancel") ==
-            "Cancel" then
-            return
-        end
-    until false
+    hs.execute([[cp "]] .. recording.configuration.paths.template ..
+                   [[/rounded-corners.png" "]] ..
+                   recording.state.paths.directory .. [[/"]])
+
+    local recordingFile = string.gsub(hs.execute(
+                                          [[ls "]] ..
+                                              recording.state.paths.directory ..
+                                              [["/*.mkv | tail -n 1]]), "%s*$",
+                                      "")
     hs.execute([["]] .. recording.configuration.paths.template ..
                    [[/ffmpeg" -i "]] .. recordingFile ..
-                   [[" -map 0:0 -c copy "]] .. projectDirectory ..
-                   [[/computer.mp4" -map_channel 0.1.0 "]] .. projectDirectory ..
-                   [[/microphone.wav" -map 0:2 "]] .. projectDirectory ..
-                   [[/computer.wav" && mv "]] .. recordingFile .. [[" ~/.Trash]])
+                   [[" -map 0:0 -c copy "]] .. recording.state.paths.directory ..
+                   [[/computer.mp4" -map_channel 0.1.0 "]] ..
+                   recording.state.paths.directory ..
+                   [[/microphone.wav" -map 0:2 "]] ..
+                   recording.state.paths.directory .. [[/computer.wav" && mv "]] ..
+                   recordingFile .. [[" ~/.Trash]])
 
     local cameraFiles
     repeat
@@ -426,11 +409,17 @@ function recording.configuration.modal:exited()
         end
     until false
     for index, file in ipairs(cameraFiles) do
-        hs.execute([[cp "]] .. file .. [[" "]] .. projectDirectory ..
-                       [[/camera--]] .. index .. [[.mp4"]])
+        hs.execute([[cp "]] .. file .. [[" "]] ..
+                       recording.state.paths.directory .. [[/camera--]] .. index ..
+                       [[.mp4"]])
     end
 
-    hs.open(projectFile)
+    hs.open(recording.state.paths.project)
+end
+function recording.timeAbsoluteToRelative(absolute)
+    return math.floor((absolute - recording.state.events.start) *
+                          recording.configuration.frameRate + 0.5) /
+               recording.configuration.frameRate
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
