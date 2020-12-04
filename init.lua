@@ -124,29 +124,29 @@ function recording.configuration.modal:entered()
     }
 
     hs.application.open("OBS")
-    repeat
-        recording.state.name = select(2,
-                                      hs.dialog.textPrompt(
-                                          "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
-                                          "Name:", "",
-                                          "Click me as you start recording on the camera"))
-        recording.state.paths.directory =
-            recording.configuration.paths.videos .. "/" .. recording.state.name
-        recording.state.paths.project =
-            recording.state.paths.directory .. "/" .. recording.state.name ..
-                ".RPP"
-    until hs.execute([[ls "]] .. recording.state.paths.directory .. [["]]) == "" or
-        (hs.dialog.blockAlert("Error", "Directory already exists: ‘" ..
-                                  recording.state.paths.directory .. "’.") and
-            false)
+    ::projectPrompt::
+    recording.state.name = select(2,
+                                  hs.dialog.textPrompt(
+                                      "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
+                                      "Name:", "",
+                                      "Click me as you start recording on the camera"))
+    recording.state.paths.directory = recording.configuration.paths.videos ..
+                                          "/" .. recording.state.name
+    recording.state.paths.project = recording.state.paths.directory .. "/" ..
+                                        recording.state.name .. ".RPP"
+    if hs.execute([[ls "]] .. recording.state.paths.directory .. [["]]) ~= "" then
+        hs.dialog.blockAlert("Error", "Directory already exists: ‘" ..
+                                 recording.state.paths.directory .. "’.")
+        goto projectPrompt
+    end
 
     recording.updateEvents(
         function(time) recording.state.events.start = time end)
     hs.application.open("OBS"):mainWindow():minimize()
     hs.execute([[mkdir "]] .. recording.state.paths.directory .. [["]])
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
-                   recording.state.paths.directory .. [[\" }']])
-    hs.execute([[npx obs-cli StartRecording]])
+                   recording.state.paths.directory .. [[\" }']], true)
+    hs.execute([[npx obs-cli StartRecording]], true)
     recording.startCamera()
     recording.switchToScene(2)
 
@@ -280,9 +280,9 @@ function recording.configuration.modal:exited()
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
 
-    hs.execute([[npx obs-cli StopRecording]])
+    hs.execute([[npx obs-cli StopRecording]], true)
     hs.execute([[npx obs-cli SetRecordingFolder '{ \"rec-folder\": \"]] ..
-                   recording.configuration.paths.videos .. [[\" }']])
+                   recording.configuration.paths.videos .. [[\" }']], true)
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
@@ -384,35 +384,36 @@ function recording.configuration.modal:exited()
                    recording.state.paths.directory .. [[/computer.wav" && mv "]] ..
                    recordingFile .. [[" ~/.Trash]])
 
-    local cameraFiles
-    repeat
-        hs.dialog.blockAlert("", "",
-                             "Click me after having connected the camera SD card")
-        cameraFiles = hs.fnutils.split(string.gsub(
-                                           hs.execute(
-                                               [[ls "]] ..
-                                                   recording.configuration.paths
-                                                       .camera ..
-                                                   [["/MVI_*.MP4 | tail -n ]] ..
-                                                   #recording.state.events
-                                                       .cameras), "%s*$", ""),
-                                       "\n")
-        if #cameraFiles == #recording.state.events.cameras then
-            break
-        elseif hs.dialog.blockAlert("Error",
-                                    "The number of files in the camera SD card (" ..
-                                        #cameraFiles ..
-                                        ") doesn’t match the number of camera events (" ..
-                                        #recording.state.events.cameras .. ").",
-                                    "Retry", "Cancel") == "Cancel" then
-            return
+    hs.dialog.blockAlert("", "",
+                         "Click me after having connected the camera SD card")
+    ::beforeTransferCameraFiles::
+    local cameraFiles = hs.fnutils.split(
+                            string.gsub(hs.execute(
+                                            [[ls "]] ..
+                                                recording.configuration.paths
+                                                    .camera ..
+                                                [["/MVI_*.MP4 | tail -n ]] ..
+                                                #recording.state.events.cameras),
+                                        "%s*$", ""), "\n")
+    if #cameraFiles ~= #recording.state.events.cameras then
+        local option = hs.dialog.blockAlert("Error",
+                                            "The number of files in the camera SD card (" ..
+                                                #cameraFiles ..
+                                                ") doesn’t match the number of camera events (" ..
+                                                #recording.state.events.cameras ..
+                                                ").", "Retry", "Cancel")
+        if option == "Retry" then
+            goto beforeTransferCameraFiles
+        elseif option == "Cancel" then
+            goto afterTransferCameraFiles
         end
-    until false
+    end
     for index, file in ipairs(cameraFiles) do
         hs.execute([[cp "]] .. file .. [[" "]] ..
                        recording.state.paths.directory .. [[/camera--]] .. index ..
                        [[.mp4"]])
     end
+    ::afterTransferCameraFiles::
 
     hs.open(recording.state.paths.project)
 end
