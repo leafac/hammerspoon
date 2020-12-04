@@ -409,9 +409,9 @@ function recording.configuration.modal:exited()
     hs.execute([["]] .. recording.configuration.paths.template ..
                    [[/ffmpeg" -i "]] .. recordingFile ..
                    [[" -map 0:0 -c copy "]] .. projectDirectory ..
-                   [[/computer.mp4" -map 0:1 -c copy "]] .. projectDirectory ..
-                   [[/microphone.aac" -map 0:2 -c copy "]] .. projectDirectory ..
-                   [[/computer.aac" && mv "]] .. recordingFile .. [[" ~/.Trash]])
+                   [[/computer.mp4" -map 0:1 "]] .. projectDirectory ..
+                   [[/microphone.wav" -map 0:2 "]] .. projectDirectory ..
+                   [[/computer.wav" && mv "]] .. recordingFile .. [[" ~/.Trash]])
 
     local cameraFiles
     repeat
