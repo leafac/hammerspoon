@@ -388,10 +388,10 @@ function recording.configuration.modal:exited()
                                             "Failed to find recording file: ‘" ..
                                                 recording.configuration.paths
                                                     .videos .. "/*.mkv’.",
-                                            "Retry", "Cancel")
+                                            "Retry", "Skip")
         if option == "Retry" then
             goto beforeRecordingFile
-        elseif option == "Cancel" then
+        elseif option == "Skip" then
             goto afterRecordingFile
         end
     end
@@ -419,10 +419,10 @@ function recording.configuration.modal:exited()
                                                 #cameraFiles ..
                                                 ") is different from the number of camera events (" ..
                                                 #recording.state.events.cameras ..
-                                                ").", "Retry", "Cancel")
+                                                ").", "Retry", "Skip")
         if option == "Retry" then
             goto beforeCameraFiles
-        elseif option == "Cancel" then
+        elseif option == "Skip" then
             goto afterCameraFiles
         end
     end
