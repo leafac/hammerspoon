@@ -128,7 +128,7 @@ function recording.configuration.modal:entered()
     recording.state.name = select(2,
                                   hs.dialog.textPrompt(
                                       "🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥",
-                                      "Name:", "", "Start recording in OBS"))
+                                      "Name:", "", "Start Recording in OBS"))
     recording.state.paths.directory = recording.configuration.paths.videos ..
                                           "/" .. recording.state.name
     recording.state.paths.project = recording.state.paths.directory .. "/" ..
