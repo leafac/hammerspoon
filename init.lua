@@ -127,6 +127,9 @@ function recording.configuration.modal:entered()
     hs.application.open("OBS")
     hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
                          "Click on “Start Recording” in OBS and then click me as you start recording on the camera")
+    hs.timer.doAfter(1, function()
+        hs.application.open("OBS"):mainWindow():minimize()
+    end)
     recording.startCamera()
     recording.switchToScene(2)
 
