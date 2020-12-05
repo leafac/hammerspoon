@@ -145,10 +145,10 @@ function recording.updateEvents(updater)
                   true, true)
 end
 function recording.startCamera()
+    hs.alert("💻 🎥 👏")
     recording.updateEvents(function(time)
         table.insert(recording.state.events.cameras, time)
     end)
-    hs.alert("💻 🎥 👏")
     hs.fnutils.each(recording.state.overlays, function(overlay)
         hs.fnutils.each(overlay, function(element)
             element.fillColor.red = 0
@@ -169,12 +169,12 @@ function recording.startCamera()
         end)
 end
 function recording.switchToScene(scene)
+    hs.fnutils.each(recording.state.overlays,
+                    function(overlay) overlay:hide() end)
     recording.updateEvents(function(time)
         table.insert(recording.state.events.scenes,
                      {start = time, scene = scene})
     end)
-    hs.fnutils.each(recording.state.overlays,
-                    function(overlay) overlay:hide() end)
     local overlay = recording.state.overlays[scene]
     if overlay ~= nil then overlay:show() end
 end
@@ -231,10 +231,10 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "C",
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "space",
                                    function()
+    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
     recording.updateEvents(function(time)
         table.insert(recording.state.events.edits, time)
     end)
-    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
 end)
 recording.configuration.modal:bind(modifiers, "return", function()
     local option = hs.dialog.blockAlert(
