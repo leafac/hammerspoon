@@ -129,10 +129,10 @@ function recording.configuration.modal:entered()
                          "Click me as you start recording on the camera")
     recording.startCamera()
     hs.execute([[npx obs-cli StartRecording]], true)
-    hs.timer.doAfter(3, function()
+    hs.timer.doAfter(2, function()
         recording.updateEvents(function(time)
             hs.alert("🎬")
-            recording.state.events.start = time - 30
+            recording.state.events.start = time - 10
             table.insert(recording.state.events.edits, time)
         end)
         hs.timer.doAfter(2, function()
