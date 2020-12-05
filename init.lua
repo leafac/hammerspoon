@@ -129,7 +129,6 @@ function recording.configuration.modal:entered()
                          "Click on “Start Recording” in OBS and then click me as you start recording on the camera")
     recording.startCamera()
     recording.switchToScene(2)
-    hs.application.open("OBS"):mainWindow():minimize()
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
