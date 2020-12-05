@@ -150,6 +150,7 @@ function recording.startCamera()
     recording.updateEvents(function(time)
         hs.alert("💻 🎥 👏")
         table.insert(recording.state.events.cameras, time)
+        table.insert(recording.state.events.edits, time)
     end)
     hs.fnutils.each(recording.state.overlays, function(overlay)
         hs.fnutils.each(overlay, function(element)
@@ -303,8 +304,6 @@ function recording.configuration.modal:exited()
                                  recording.timeAbsoluteToRelative(
                                      recording.state.events.stop))
 
-    local markers = {}
-
     local cameraItems = {}
     for index, start in ipairs(recording.state.events.cameras) do
         table.insert(cameraItems, [[
@@ -323,8 +322,6 @@ function recording.configuration.modal:exited()
                 >
             >
         ]])
-        table.insert(markers,
-                     {position = start, description = [[Camera ]] .. index})
     end
     projectRPP = string.gsub(projectRPP, "NAME Camera",
                              "%0\n" .. table.concat(cameraItems, "\n") .. "\n")
@@ -353,23 +350,17 @@ function recording.configuration.modal:exited()
                 >
             >
         ]])
-        table.insert(markers, {
-            position = scene.start,
-            description = [[Scene ]] .. scene.scene
-        })
     end
     projectRPP = string.gsub(projectRPP, "NAME Video",
                              "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
 
-    for _, position in ipairs(recording.state.events.edits) do
-        table.insert(markers, {position = position, description = "Edit"})
-    end
     projectRPP = string.gsub(projectRPP, ">%s*$",
                              table.concat(
-                                 hs.fnutils.map(markers, function(marker)
-            return [[MARKER 0 ]] ..
-                       recording.timeAbsoluteToRelative(marker.position) ..
-                       [[ "]] .. marker.description .. [["]]
+                                 hs.fnutils.map(recording.state.events.edits,
+                                                function(position)
+            return
+                [[MARKER 0 ]] .. recording.timeAbsoluteToRelative(position) ..
+                    [[ ""]]
         end), "\n") .. "\n%0")
 
     local projectFileHandle = io.open(projectFile, "w")
