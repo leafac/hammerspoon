@@ -3,6 +3,8 @@ hs.alert("Hammerspoon configuration loaded")
 local modifiers = {"⌥", "⌃"}
 local roundedCornerRadius = 10
 hs.window.animationDuration = 0
+hs.alert.defaultStyle.fadeInDuration = 0
+hs.alert.defaultStyle.fadeOutDuration = 0
 
 hs.hotkey.bind(modifiers, "return", function() hs.reload() end)
 hs.hotkey.bind(modifiers, ",",
@@ -122,16 +124,22 @@ function recording.configuration.modal:entered()
         cameraTimer = nil
     }
 
-    recording.updateEvents(
-        function(time) recording.state.events.start = time end)
     hs.application.open("OBS")
     hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                         "Click on “Start Recording” in OBS and then click me as you start recording on the camera")
-    hs.timer.doAfter(1, function()
-        hs.application.open("OBS"):mainWindow():minimize()
-    end)
+                         "Click me as you start recording on the camera")
     recording.startCamera()
-    recording.switchToScene(2)
+    hs.execute([[npx obs-cli StartRecording]], true)
+    hs.timer.doAfter(3, function()
+        recording.updateEvents(function(time)
+            hs.alert("🎬")
+            recording.state.events.start = time - 30
+            table.insert(recording.state.events.edits, time)
+        end)
+        hs.timer.doAfter(2, function()
+            hs.application.open("OBS"):mainWindow():minimize()
+            recording.switchToScene(2)
+        end)
+    end)
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
@@ -268,9 +276,7 @@ function recording.configuration.modal:exited()
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
 
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("", "",
-                         "Click on “Stop Recording” in OBS and then click me")
+    hs.execute([[npx obs-cli StopRecording]], true)
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
