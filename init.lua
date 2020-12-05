@@ -122,15 +122,14 @@ function recording.configuration.modal:entered()
         cameraTimer = nil
     }
 
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                         "Click me as you start recording on the camera")
-    hs.application.open("OBS"):mainWindow():minimize()
-    hs.execute([[npx obs-cli StartRecording]], true)
     recording.updateEvents(
         function(time) recording.state.events.start = time end)
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
+                         "Click on “Start Recording” in OBS and then click me as you start recording on the camera")
     recording.startCamera()
     recording.switchToScene(2)
+    hs.application.open("OBS"):mainWindow():minimize()
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
@@ -146,8 +145,8 @@ function recording.updateEvents(updater)
                   true, true)
 end
 function recording.startCamera()
-    hs.alert("💻 🎥 👏")
     recording.updateEvents(function(time)
+        hs.alert("💻 🎥 👏")
         table.insert(recording.state.events.cameras, time)
     end)
     hs.fnutils.each(recording.state.overlays, function(overlay)
@@ -172,13 +171,16 @@ end
 function recording.switchToScene(scene)
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:hide() end)
-    hs.timer.usleep(100000)
-    recording.updateEvents(function(time)
-        table.insert(recording.state.events.scenes,
-                     {start = time, scene = scene})
+    hs.timer.doAfter(0.1, function()
+        recording.updateEvents(function(time)
+            table.insert(recording.state.events.scenes,
+                         {start = time, scene = scene})
+        end)
+        hs.timer.doAfter(0.1, function()
+            local overlay = recording.state.overlays[scene]
+            if overlay ~= nil then overlay:show() end
+        end)
     end)
-    local overlay = recording.state.overlays[scene]
-    if overlay ~= nil then overlay:show() end
 end
 recording.configuration.modal:bind(recording.configuration.modifiers, "Z",
                                    function() recording.switchToScene(2) end)
@@ -233,8 +235,8 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "C",
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "space",
                                    function()
-    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
     recording.updateEvents(function(time)
+        hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
         table.insert(recording.state.events.edits, time)
     end)
 end)
@@ -263,7 +265,9 @@ function recording.configuration.modal:exited()
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
 
-    hs.execute([[npx obs-cli StopRecording]], true)
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("", "",
+                         "Click on “Stop Recording” in OBS and then click me")
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
