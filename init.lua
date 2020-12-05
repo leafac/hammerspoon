@@ -122,14 +122,15 @@ function recording.configuration.modal:entered()
         cameraTimer = nil
     }
 
-    recording.updateEvents(
-        function(time) recording.state.events.start = time end)
     hs.application.open("OBS")
     hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                         "Click on “Start Recording” in OBS and then click me as you start recording on the camera")
+                         "Click me as you start recording on the camera")
+    hs.application.open("OBS"):mainWindow():minimize()
+    hs.execute([[npx obs-cli StartRecording]], true)
+    recording.updateEvents(
+        function(time) recording.state.events.start = time end)
     recording.startCamera()
     recording.switchToScene(2)
-    hs.application.open("OBS"):mainWindow():minimize()
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
@@ -171,6 +172,7 @@ end
 function recording.switchToScene(scene)
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:hide() end)
+    hs.timer.usleep(100000)
     recording.updateEvents(function(time)
         table.insert(recording.state.events.scenes,
                      {start = time, scene = scene})
@@ -261,9 +263,7 @@ function recording.configuration.modal:exited()
     hs.fnutils.each(recording.state.overlays,
                     function(overlay) overlay:delete() end)
 
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("", "",
-                         "Click on “Stop Recording” in OBS and then click me")
+    hs.execute([[npx obs-cli StopRecording]], true)
     hs.application.open("OBS"):kill()
 
     hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
@@ -402,16 +402,20 @@ function recording.configuration.modal:exited()
                    [[/computer.wav" && mv "]] .. recordingFile .. [[" ~/.Trash]])
     ::afterRecordingFile::
 
-    hs.dialog.blockAlert("", "", "Connect the camera SD card and then click me")
+    local cameraFiles
+    local option = hs.dialog.blockAlert("", "",
+                                        "Connect the camera SD card and then click me",
+                                        "Skip")
+    if option == "Skip" then goto afterCameraFiles end
     ::beforeCameraFiles::
-    local cameraFiles = hs.fnutils.split(
-                            string.gsub(hs.execute(
-                                            [[ls "]] ..
-                                                recording.configuration.paths
-                                                    .camera ..
-                                                [["/MVI_*.MP4 | tail -n ]] ..
-                                                #recording.state.events.cameras),
-                                        "%s*$", ""), "\n")
+    cameraFiles = hs.fnutils.split(string.gsub(
+                                       hs.execute(
+                                           [[ls "]] ..
+                                               recording.configuration.paths
+                                                   .camera ..
+                                               [["/MVI_*.MP4 | tail -n ]] ..
+                                               #recording.state.events.cameras),
+                                       "%s*$", ""), "\n")
     if #cameraFiles ~= #recording.state.events.cameras then
         local option = hs.dialog.blockAlert("Error",
                                             "The number of files in the camera SD card (" ..
