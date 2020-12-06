@@ -341,12 +341,12 @@ function recording.configuration.modal:exited()
                    [[/rounded-corners.png" "]] .. projectDirectory .. [[/"]])
 
     ::beforeRecordingFile::
-    local recordingFile = string.gsub(hs.execute(
-                                          [[ls "]] ..
-                                              recording.configuration.paths
-                                                  .videos ..
-                                              [["/*.mkv | tail -n 1]]), "%s*$",
-                                      "")
+    local recordingFile = string.match(hs.execute(
+                                           [[ls "]] ..
+                                               recording.configuration.paths
+                                                   .videos ..
+                                               [["/*.mkv | tail -n 1]]),
+                                       "[^\n]+")
     if recordingFile == "" then
         local option = hs.dialog.blockAlert("Error",
                                             "Failed to find recording file: ‘" ..
@@ -367,20 +367,20 @@ function recording.configuration.modal:exited()
                    [[/computer.wav" && mv "]] .. recordingFile .. [[" ~/.Trash]])
     ::afterRecordingFile::
 
-    local cameraFiles
+    local cameraFiles = {}
     local option = hs.dialog.blockAlert("", "",
                                         "Connect the camera SD card and then click me",
                                         "Skip")
     if option == "Skip" then goto afterCameraFiles end
     ::beforeCameraFiles::
-    cameraFiles = hs.fnutils.split(string.gsub(
-                                       hs.execute(
-                                           [[ls "]] ..
-                                               recording.configuration.paths
-                                                   .camera ..
-                                               [["/MVI_*.MP4 | tail -n ]] ..
-                                               #recording.state.events.cameras),
-                                       "%s*$", ""), "\n")
+    for cameraFile in string.gmatch(hs.execute(
+                                        [[ls "]] ..
+                                            recording.configuration.paths.camera ..
+                                            [["/MVI_*.MP4 | tail -n ]] ..
+                                            #recording.state.events.cameras),
+                                    "[^\n]+") do
+        table.insert(cameraFiles, cameraFile)
+    end
     if #cameraFiles ~= #recording.state.events.cameras then
         local option = hs.dialog.blockAlert("Error",
                                             "The number of files in the camera SD card (" ..
