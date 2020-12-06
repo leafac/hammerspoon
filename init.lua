@@ -1,46 +1,47 @@
 hs.alert("Hammerspoon configuration loaded")
 
-local modifiers = {"⌥", "⌃"}
-local roundedCornerRadius = 10
+local configuration = {modifiers = {"⌥", "⌃"}, roundedCornerRadius = 10}
+
 hs.window.animationDuration = 0
 
-hs.hotkey.bind(modifiers, "return", function() hs.reload() end)
-hs.hotkey.bind(modifiers, ",",
+hs.hotkey.bind(configuration.modifiers, "return", function() hs.reload() end)
+hs.hotkey.bind(configuration.modifiers, ",",
                function() hs.execute([[code ~/.hammerspoon]], true) end)
-hs.hotkey.bind(modifiers, "space", function() hs.toggleConsole() end)
-hs.hotkey.bind(modifiers, "escape", function()
+hs.hotkey.bind(configuration.modifiers, "space",
+               function() hs.toggleConsole() end)
+hs.hotkey.bind(configuration.modifiers, "escape", function()
     hs.osascript.applescript("beep")
     hs.sound.getByName("Submarine"):play()
 end)
 
-hs.hotkey.bind(modifiers, "W", function()
+hs.hotkey.bind(configuration.modifiers, "W", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 2 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(modifiers, "E", function()
+hs.hotkey.bind(configuration.modifiers, "E", function()
     hs.window.focusedWindow():move({x = 1 / 2, y = 0 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(modifiers, "D", function()
+hs.hotkey.bind(configuration.modifiers, "D", function()
     hs.window.focusedWindow():move({x = 1 / 2, y = 0 / 2, w = 1 / 2, h = 2 / 2})
 end)
-hs.hotkey.bind(modifiers, "C", function()
+hs.hotkey.bind(configuration.modifiers, "C", function()
     hs.window.focusedWindow():move({x = 1 / 2, y = 1 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(modifiers, "X", function()
+hs.hotkey.bind(configuration.modifiers, "X", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 1 / 2, w = 2 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(modifiers, "Z", function()
+hs.hotkey.bind(configuration.modifiers, "Z", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 1 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(modifiers, "A", function()
+hs.hotkey.bind(configuration.modifiers, "A", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 1 / 2, h = 2 / 2})
 end)
-hs.hotkey.bind(modifiers, "Q", function()
+hs.hotkey.bind(configuration.modifiers, "Q", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(modifiers, "S", function()
+hs.hotkey.bind(configuration.modifiers, "S", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 2 / 2, h = 2 / 2})
 end)
-hs.hotkey.bind(modifiers, "tab", function()
+hs.hotkey.bind(configuration.modifiers, "tab", function()
     local window = hs.window.focusedWindow()
     window:moveToScreen(window:screen():next())
 end)
@@ -107,8 +108,8 @@ function recording.configuration.modal:entered()
             },
             fillColor = {alpha = 0.5},
             roundedRectRadii = {
-                xRadius = roundedCornerRadius,
-                yRadius = roundedCornerRadius
+                xRadius = configuration.roundedCornerRadius,
+                yRadius = configuration.roundedCornerRadius
             }
         }):behavior({"canJoinAllSpaces", "stationary"}),
         [2] = hs.canvas.new({
@@ -228,7 +229,7 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "space",
         table.insert(recording.state.events.edits, time)
     end)
 end)
-recording.configuration.modal:bind(modifiers, "return", function()
+recording.configuration.modal:bind(configuration.modifiers, "return", function()
     local option = hs.dialog.blockAlert(
                        "Currently recording, do you really want to reload the Hammerspoon configuration?",
                        "", "No", "Yes")
@@ -438,8 +439,8 @@ function screenRoundedCorners.start()
                 action = "fill",
                 compositeRule = "sourceOut",
                 roundedRectRadii = {
-                    xRadius = roundedCornerRadius,
-                    yRadius = roundedCornerRadius
+                    xRadius = configuration.roundedCornerRadius,
+                    yRadius = configuration.roundedCornerRadius
                 }
             }):behavior({"canJoinAllSpaces", "stationary"}):show())
     end
@@ -448,7 +449,7 @@ screenRoundedCorners.start()
 globalScreenRoundedCornersWatcherToPreventGarbageCollection =
     hs.screen.watcher.new(function() screenRoundedCorners.start() end):start()
 
-hs.hotkey.bind(modifiers, "P", function()
+hs.hotkey.bind(configuration.modifiers, "P", function()
     hs.dialog.blockAlert("", [[
 Font smoothing in Big Sur (https://tonsky.me/blog/monitors/):
 $ defaults -currentHost write -g AppleFontSmoothing -int 0
