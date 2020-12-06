@@ -3,8 +3,6 @@ hs.alert("Hammerspoon configuration loaded")
 local modifiers = {"⌥", "⌃"}
 local roundedCornerRadius = 10
 hs.window.animationDuration = 0
-hs.alert.defaultStyle.fadeInDuration = 0
-hs.alert.defaultStyle.fadeOutDuration = 0
 
 hs.hotkey.bind(modifiers, "return", function() hs.reload() end)
 hs.hotkey.bind(modifiers, ",",
@@ -78,13 +76,7 @@ function recording.configuration.modal:entered()
         recording.configuration.frames.recording.scale)
 
     recording.state = {
-        events = {
-            start = nil,
-            stop = nil,
-            cameras = {},
-            scenes = {},
-            edits = {}
-        },
+        events = {cameras = {}, scenes = {}, edits = {}, stop = nil},
         overlays = {
             [1] = hs.canvas.new({
                 x = 0,
@@ -126,20 +118,11 @@ function recording.configuration.modal:entered()
 
     hs.application.open("OBS")
     hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                         "Click me as you start recording on the camera")
-    recording.startCamera()
+                         "Start Recording")
+    hs.application.open("OBS"):mainWindow():minimize()
     hs.execute([[npx obs-cli StartRecording]], true)
-    hs.timer.doAfter(2, function()
-        recording.updateEvents(function(time)
-            hs.alert("🎬 💻 🎥 👏")
-            recording.state.events.start = time - 10
-            table.insert(recording.state.events.edits, time)
-        end)
-        hs.timer.doAfter(2, function()
-            hs.application.open("OBS"):mainWindow():minimize()
-            recording.switchToScene(2)
-        end)
-    end)
+    recording.startCamera()
+    recording.switchToScene(2)
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
@@ -149,12 +132,8 @@ function recording.configuration.modal:entered()
     end)
     hs.audiodevice.watcher.start()
 end
-function recording.updateEvents(updater)
-    updater(hs.timer.secondsSinceEpoch())
-    hs.json.write(recording.state.events, recording.configuration.paths.events,
-                  true, true)
-end
 function recording.startCamera()
+    hs.dialog.blockAlert("", "", "Start Recording on the Camera")
     recording.updateEvents(function(time)
         hs.alert("💻 🎥 👏")
         table.insert(recording.state.events.cameras, time)
@@ -258,12 +237,11 @@ recording.configuration.modal:bind(modifiers, "return", function()
     if option == "Yes" then hs.reload() end
 end)
 recording.configuration.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("", "",
-                                        "Click me as you restart recording on the camera",
-                                        "Click me as you stop recording on the camera")
-    if option == "Click me as you restart recording on the camera" then
+    local option = hs.dialog.blockAlert("Stop recording on the camera", "",
+                                        "Continue Recording", "Stop Recording")
+    if option == "Continue Recording" then
         recording.startCamera()
-    elseif option == "Click me as you stop recording on the camera" then
+    elseif option == "Stop Recording" then
         recording.configuration.modal:exit()
     end
 end)
@@ -306,22 +284,18 @@ function recording.configuration.modal:exited()
     local projectRPP = templateFileHandle:read("*all")
     templateFileHandle:close()
 
-    projectRPP = string.gsub(projectRPP, "LENGTH %d+", "LENGTH " ..
-                                 recording.timeAbsoluteToRelative(
-                                     recording.state.events.stop))
+    projectRPP = string.gsub(projectRPP, "LENGTH %d+",
+                             "LENGTH " .. recording.state.events.stop)
 
     local cameraItems = {}
     for index, start in ipairs(recording.state.events.cameras) do
         table.insert(cameraItems, [[
             <ITEM
-                POSITION ]] .. recording.timeAbsoluteToRelative(start) .. [[
+                POSITION ]] .. start .. [[
 
-                LENGTH ]] ..
-                         (recording.timeAbsoluteToRelative(
-                             index < #recording.state.events.cameras and
-                                 recording.state.events.cameras[index + 1] or
-                                 recording.state.events.stop) -
-                             recording.timeAbsoluteToRelative(start)) .. [[
+                LENGTH ]] .. ((index < #recording.state.events.cameras and
+                         recording.state.events.cameras[index + 1] or
+                         recording.state.events.stop) - start) .. [[
 
                 <SOURCE VIDEO
                     FILE "camera--]] .. index .. [[.mp4"
@@ -338,16 +312,11 @@ function recording.configuration.modal:exited()
             <ITEM
                 NAME ]] .. scene.scene .. [[
 
-                POSITION ]] .. recording.timeAbsoluteToRelative(scene.start) ..
-                         [[
+                POSITION ]] .. scene.start .. [[
 
-                LENGTH ]] ..
-                         (recording.timeAbsoluteToRelative(
-                             index < #recording.state.events.scenes and
-                                 recording.state.events.scenes[index + 1].start or
-                                 recording.state.events.stop) -
-                             recording.timeAbsoluteToRelative(scene.start)) ..
-                         [[
+                LENGTH ]] .. ((index < #recording.state.events.scenes and
+                         recording.state.events.scenes[index + 1].start or
+                         recording.state.events.stop) - scene.start) .. [[
 
                 <SOURCE VIDEOEFFECT
                     <CODE
@@ -364,9 +333,7 @@ function recording.configuration.modal:exited()
                              table.concat(
                                  hs.fnutils.map(recording.state.events.edits,
                                                 function(position)
-            return
-                [[MARKER 0 ]] .. recording.timeAbsoluteToRelative(position) ..
-                    [[ ""]]
+            return [[MARKER 0 ]] .. position .. [[ ""]]
         end), "\n") .. "\n%0")
 
     local projectFileHandle = io.open(projectFile, "w")
@@ -440,10 +407,17 @@ function recording.configuration.modal:exited()
 
     hs.open(projectFile)
 end
-function recording.timeAbsoluteToRelative(absolute)
-    return math.floor((absolute - recording.state.events.start) *
-                          recording.configuration.frameRate) /
-               recording.configuration.frameRate
+function recording.updateEvents(updater)
+    local streamingStatus = hs.execute([[npx obs-cli GetStreamingStatus]], true)
+    local hours, minutes, seconds, milliseconds =
+        string.match(hs.json.decode(streamingStatus).recTimecode,
+                     "(%d%d):(%d%d):(%d%d).(%d%d%d)")
+    updater(math.floor(
+                (hours * 60 * 60 + minutes * 60 + seconds + milliseconds / 1000) *
+                    recording.configuration.frameRate) /
+                recording.configuration.frameRate)
+    hs.json.write(recording.state.events, recording.configuration.paths.events,
+                  true, true)
 end
 
 local dateAndTime = hs.menubar.new():setClickCallback(
