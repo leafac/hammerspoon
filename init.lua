@@ -399,8 +399,8 @@ do
     do
         recording.configuration.modal:bind(recording.configuration.modifiers,
                                            "space", function()
-            hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
             recording.updateEvents(function(time)
+                hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
                 table.insert(recording.state.events.markers, time)
             end)
         end)
@@ -564,7 +564,8 @@ do
                 ::markers::
                 do
                     local markers = ""
-                    for index, position in recording.state.events.markers do
+                    for index, position in
+                        ipairs(recording.state.events.markers) do
                         markers = markers .. [[MARKER ]] .. index .. [[ ]] ..
                                       position .. [[ ""]] .. "\n"
                     end
