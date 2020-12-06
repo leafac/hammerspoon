@@ -66,6 +66,12 @@ local recording = {
     state = nil
 }
 function recording.configuration.modal:entered()
+    recording.state = {
+        events = {cameras = {}, scenes = {}, edits = {}, stop = nil},
+        overlays = nil,
+        cameraTimer = nil
+    }
+
     local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
     builtInOutput:setOutputMuted(false)
     builtInOutput:setOutputVolume(20)
@@ -75,52 +81,47 @@ function recording.configuration.modal:entered()
         recording.configuration.frames.recording.h,
         recording.configuration.frames.recording.scale)
 
-    recording.state = {
-        events = {cameras = {}, scenes = {}, edits = {}, stop = nil},
-        overlays = {
-            [1] = hs.canvas.new({
-                x = 0,
-                y = 0,
-                w = recording.configuration.frames.recording.w,
-                h = recording.configuration.frames.recording.h
-            }):appendElements({
-                type = "rectangle",
-                action = "fill",
-                frame = {
-                    x = recording.configuration.frames.recording.w * 3 / 4 +
-                        recording.configuration.overlayPadding,
-                    y = recording.configuration.frames.recording.h * 0 / 4 +
-                        recording.configuration.overlayPadding,
-                    w = recording.configuration.frames.recording.w * 1 / 4 -
-                        recording.configuration.overlayPadding * 2,
-                    h = recording.configuration.frames.recording.h * 1 / 4 -
-                        recording.configuration.overlayPadding * 2
-                },
-                fillColor = {alpha = 0.5},
-                roundedRectRadii = {
-                    xRadius = roundedCornerRadius,
-                    yRadius = roundedCornerRadius
-                }
-            }):behavior({"canJoinAllSpaces", "stationary"}),
-            [2] = hs.canvas.new({
-                x = 0,
-                y = 0,
-                w = recording.configuration.frames.recording.w,
-                h = recording.configuration.frames.recording.h
-            }):appendElements({
-                type = "rectangle",
-                action = "fill",
-                fillColor = {alpha = 0.5}
-            }):behavior({"canJoinAllSpaces", "stationary"})
-        },
-        cameraTimer = nil
-    }
-
     hs.application.open("OBS")
     hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
                          "Start Recording")
     hs.application.open("OBS"):mainWindow():minimize()
     hs.execute([[npx obs-cli StartRecording]], true)
+    recording.state.overlays = {
+        [1] = hs.canvas.new({
+            x = 0,
+            y = 0,
+            w = recording.configuration.frames.recording.w,
+            h = recording.configuration.frames.recording.h
+        }):appendElements({
+            type = "rectangle",
+            action = "fill",
+            frame = {
+                x = recording.configuration.frames.recording.w * 3 / 4 +
+                    recording.configuration.overlayPadding,
+                y = recording.configuration.frames.recording.h * 0 / 4 +
+                    recording.configuration.overlayPadding,
+                w = recording.configuration.frames.recording.w * 1 / 4 -
+                    recording.configuration.overlayPadding * 2,
+                h = recording.configuration.frames.recording.h * 1 / 4 -
+                    recording.configuration.overlayPadding * 2
+            },
+            fillColor = {alpha = 0.5},
+            roundedRectRadii = {
+                xRadius = roundedCornerRadius,
+                yRadius = roundedCornerRadius
+            }
+        }):behavior({"canJoinAllSpaces", "stationary"}),
+        [2] = hs.canvas.new({
+            x = 0,
+            y = 0,
+            w = recording.configuration.frames.recording.w,
+            h = recording.configuration.frames.recording.h
+        }):appendElements({
+            type = "rectangle",
+            action = "fill",
+            fillColor = {alpha = 0.5}
+        }):behavior({"canJoinAllSpaces", "stationary"})
+    }
     recording.startCamera()
     recording.switchToScene(2)
 
@@ -133,20 +134,20 @@ function recording.configuration.modal:entered()
     hs.audiodevice.watcher.start()
 end
 function recording.startCamera()
-    hs.dialog.blockAlert("", "", "Start Recording on the Camera")
+    hs.dialog.blockAlert("", "", "Start/Restart Recording on the Camera")
     recording.updateEvents(function(time)
         hs.alert("💻 🎥 👏")
         table.insert(recording.state.events.cameras, time)
         table.insert(recording.state.events.edits, time)
     end)
+    if recording.state.cameraTimer ~= nil then
+        recording.state.cameraTimer:stop()
+    end
     hs.fnutils.each(recording.state.overlays, function(overlay)
         hs.fnutils.each(overlay, function(element)
             element.fillColor.red = 0
         end)
     end)
-    if recording.state.cameraTimer ~= nil then
-        recording.state.cameraTimer:stop()
-    end
     recording.state.cameraTimer = hs.timer.doAfter(
                                       recording.configuration.cameraDuration,
                                       function()
@@ -225,8 +226,8 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "C",
 end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "space",
                                    function()
+    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
     recording.updateEvents(function(time)
-        hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
         table.insert(recording.state.events.edits, time)
     end)
 end)
