@@ -279,10 +279,10 @@ function recording.configuration.modal:exited()
 
     hs.execute([[mkdir "]] .. projectDirectory .. [["]])
 
-    local templateFileHandle = io.open(
-                                   recording.configuration.paths.template ..
-                                       "/TEMPLATE.RPP", "r")
-    local projectRPP = templateFileHandle:read("*all")
+    local templateFileHandle = assert(io.open(
+                                          recording.configuration.paths.template ..
+                                              "/TEMPLATE.RPP", "r"))
+    local projectRPP = templateFileHandle:read("a")
     templateFileHandle:close()
 
     projectRPP = string.gsub(projectRPP, "LENGTH %d+",
@@ -330,14 +330,14 @@ function recording.configuration.modal:exited()
     projectRPP = string.gsub(projectRPP, "NAME Video",
                              "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
 
-    projectRPP = string.gsub(projectRPP, ">%s*$",
-                             table.concat(
-                                 hs.fnutils.map(recording.state.events.edits,
-                                                function(position)
-            return [[MARKER 0 ]] .. position .. [[ ""]]
-        end), "\n") .. "\n%0")
+    local markers = ""
+    for index, position in recording.state.events.edits do
+        markers = markers .. [[MARKER ]] .. index .. [[ ]] .. position ..
+                      [[ ""]] .. "\n"
+    end
+    projectRPP = string.gsub(projectRPP, ">%s*$", markers .. "%0")
 
-    local projectFileHandle = io.open(projectFile, "w")
+    local projectFileHandle = assert(io.open(projectFile, "w"))
     projectFileHandle:write(projectRPP)
     projectFileHandle:close()
 
