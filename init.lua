@@ -288,28 +288,27 @@ function recording.configuration.modal:exited()
     projectRPP = string.gsub(projectRPP, "LENGTH %d+",
                              "LENGTH " .. recording.state.events.stop)
 
-    local cameraItems = {}
+    local cameraItems = ""
     for index, start in ipairs(recording.state.events.cameras) do
-        table.insert(cameraItems, [[
+        cameraItems = cameraItems .. [[
             <ITEM
                 POSITION ]] .. start .. [[
 
                 LENGTH ]] .. ((index < #recording.state.events.cameras and
-                         recording.state.events.cameras[index + 1] or
-                         recording.state.events.stop) - start) .. [[
+                          recording.state.events.cameras[index + 1] or
+                          recording.state.events.stop) - start) .. [[
 
                 <SOURCE VIDEO
                     FILE "camera--]] .. index .. [[.mp4"
                 >
             >
-        ]])
+        ]]
     end
-    projectRPP = string.gsub(projectRPP, "NAME Camera",
-                             "%0\n" .. table.concat(cameraItems, "\n") .. "\n")
+    projectRPP = string.gsub(projectRPP, "NAME Camera", "%0\n" .. cameraItems)
 
-    local sceneItems = {}
+    local sceneItems = ""
     for index, scene in ipairs(recording.state.events.scenes) do
-        table.insert(sceneItems, [[
+        sceneItems = sceneItems .. [[
             <ITEM
                 NAME ]] .. scene.scene .. [[
 
@@ -325,10 +324,9 @@ function recording.configuration.modal:exited()
                     >
                 >
             >
-        ]])
+        ]]
     end
-    projectRPP = string.gsub(projectRPP, "NAME Video",
-                             "%0\n" .. table.concat(sceneItems, "\n") .. "\n")
+    projectRPP = string.gsub(projectRPP, "NAME Video", "%0\n" .. sceneItems)
 
     local markers = ""
     for index, position in recording.state.events.edits do
