@@ -48,7 +48,7 @@ end)
 local recording = {
     configuration = {
         modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
-        modifiers = hs.fnutils.concat({"⌘"}, modifiers),
+        modifiers = {"⌘", "⌥", "⌃"},
         paths = {
             videos = hs.fs.pathToAbsolute("~/Videos"),
             events = hs.fs.pathToAbsolute("~/Videos") .. "/events.json",
@@ -143,25 +143,22 @@ function recording.startCamera()
     if recording.state.cameraTimer ~= nil then
         recording.state.cameraTimer:stop()
     end
-    hs.fnutils.each(recording.state.overlays, function(overlay)
-        hs.fnutils.each(overlay, function(element)
-            element.fillColor.red = 0
-        end)
-    end)
+    for _, overlay in pairs(recording.state.overlays) do
+        for _, element in pairs(overlay) do element.fillColor.red = 0 end
+    end
     recording.state.cameraTimer = hs.timer.doAfter(
                                       recording.configuration.cameraDuration,
                                       function()
-            hs.fnutils.each(recording.state.overlays, function(overlay)
-                hs.fnutils.each(overlay,
-                                function(element)
+
+            for _, overlay in pairs(recording.state.overlays) do
+                for _, element in pairs(overlay) do
                     element.fillColor.red = 1
-                end)
-            end)
+                end
+            end
         end)
 end
 function recording.switchToScene(scene)
-    hs.fnutils.each(recording.state.overlays,
-                    function(overlay) overlay:hide() end)
+    for _, overlay in pairs(recording.state.overlays) do overlay:hide() end
     hs.timer.doAfter(0.1, function()
         recording.updateEvents(function(time)
             table.insert(recording.state.events.scenes,
@@ -252,8 +249,7 @@ function recording.configuration.modal:exited()
     hs.audiodevice.watcher.stop()
 
     recording.state.cameraTimer:stop()
-    hs.fnutils.each(recording.state.overlays,
-                    function(overlay) overlay:delete() end)
+    for _, overlay in pairs(recording.state.overlays) do overlay:delete() end
 
     hs.execute([[npx obs-cli StopRecording]], true)
     hs.application.open("OBS"):kill()
@@ -428,12 +424,12 @@ globalDateAndTimeTimerToPreventGarbageCollection =
 
 local screenRoundedCorners = {canvases = {}}
 function screenRoundedCorners.start()
-    hs.fnutils.each(screenRoundedCorners.canvases,
-                    function(canvas) canvas:delete() end)
-    screenRoundedCorners.canvases = hs.fnutils.map(hs.screen.allScreens(),
-                                                   function(screen)
-        return hs.canvas.new(screen:fullFrame()):appendElements(
-                   {
+    for _, canvas in pairs(screenRoundedCorners.canvases) do canvas:delete() end
+    screenRoundedCorners.canvases = {}
+    for _, screen in pairs(hs.screen.allScreens()) do
+        table.insert(screenRoundedCorners.canvases,
+                     hs.canvas.new(screen:fullFrame()):appendElements(
+                         {
                 type = "rectangle",
                 action = "fill",
                 fillColor = {hex = "#000"}
@@ -445,8 +441,8 @@ function screenRoundedCorners.start()
                     xRadius = roundedCornerRadius,
                     yRadius = roundedCornerRadius
                 }
-            }):behavior({"canJoinAllSpaces", "stationary"}):show()
-    end)
+            }):behavior({"canJoinAllSpaces", "stationary"}):show())
+    end
 end
 screenRoundedCorners.start()
 globalScreenRoundedCornersWatcherToPreventGarbageCollection =
