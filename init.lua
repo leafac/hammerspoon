@@ -68,7 +68,12 @@ local recording = {
 }
 function recording.configuration.modal:entered()
     recording.state = {
-        events = {cameras = {}, scenes = {}, edits = {}, stop = nil},
+        events = {
+            cameraStarts = {},
+            sceneTransitions = {},
+            markers = {},
+            stop = nil
+        },
         overlays = nil,
         cameraTimer = nil
     }
@@ -124,7 +129,7 @@ function recording.configuration.modal:entered()
         }):behavior({"canJoinAllSpaces", "stationary"})
     }
     recording.startCamera()
-    recording.switchToScene(2)
+    recording.transitionToScene(2)
 
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
@@ -138,8 +143,8 @@ function recording.startCamera()
     hs.dialog.blockAlert("", "", "Start/Restart Recording on the Camera")
     recording.updateEvents(function(time)
         hs.alert("💻 🎥 👏")
-        table.insert(recording.state.events.cameras, time)
-        table.insert(recording.state.events.edits, time)
+        table.insert(recording.state.events.cameraStarts, time)
+        table.insert(recording.state.events.markers, time)
     end)
     if recording.state.cameraTimer ~= nil then
         recording.state.cameraTimer:stop()
@@ -158,11 +163,11 @@ function recording.startCamera()
             end
         end)
 end
-function recording.switchToScene(scene)
+function recording.transitionToScene(scene)
     for _, overlay in pairs(recording.state.overlays) do overlay:hide() end
     hs.timer.doAfter(0.1, function()
         recording.updateEvents(function(time)
-            table.insert(recording.state.events.scenes,
+            table.insert(recording.state.events.sceneTransitions,
                          {start = time, scene = scene})
         end)
         hs.timer.doAfter(0.1, function()
@@ -172,11 +177,11 @@ function recording.switchToScene(scene)
     end)
 end
 recording.configuration.modal:bind(recording.configuration.modifiers, "Z",
-                                   function() recording.switchToScene(2) end)
+                                   function() recording.transitionToScene(2) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "A",
-                                   function() recording.switchToScene(1) end)
+                                   function() recording.transitionToScene(1) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "Q",
-                                   function() recording.switchToScene(3) end)
+                                   function() recording.transitionToScene(3) end)
 recording.configuration.modal:bind(recording.configuration.modifiers, "S",
                                    function()
     hs.window.focusedWindow():move({
@@ -226,7 +231,7 @@ recording.configuration.modal:bind(recording.configuration.modifiers, "space",
                                    function()
     hs.alert("✂️", {}, hs.screen.mainScreen(), 0.1)
     recording.updateEvents(function(time)
-        table.insert(recording.state.events.edits, time)
+        table.insert(recording.state.events.markers, time)
     end)
 end)
 recording.configuration.modal:bind(configuration.modifiers, "return", function()
@@ -285,15 +290,15 @@ function recording.configuration.modal:exited()
     projectRPP = string.gsub(projectRPP, "LENGTH %d+",
                              "LENGTH " .. recording.state.events.stop)
 
-    local cameraItems = ""
-    for index, start in ipairs(recording.state.events.cameras) do
-        cameraItems = cameraItems .. [[
+    local cameraStartItems = ""
+    for index, start in ipairs(recording.state.events.cameraStarts) do
+        cameraStartItems = cameraStartItems .. [[
             <ITEM
                 POSITION ]] .. start .. [[
 
-                LENGTH ]] .. ((index < #recording.state.events.cameras and
-                          recording.state.events.cameras[index + 1] or
-                          recording.state.events.stop) - start) .. [[
+                LENGTH ]] .. ((index < #recording.state.events.cameraStarts and
+                               recording.state.events.cameraStarts[index + 1] or
+                               recording.state.events.stop) - start) .. [[
 
                 <SOURCE VIDEO
                     FILE "camera--]] .. index .. [[.mp4"
@@ -301,19 +306,25 @@ function recording.configuration.modal:exited()
             >
         ]]
     end
-    projectRPP = string.gsub(projectRPP, "NAME Camera", cameraItems .. "%0")
+    projectRPP =
+        string.gsub(projectRPP, "NAME Camera", cameraStartItems .. "%0")
 
-    local sceneItems = ""
-    for index, scene in ipairs(recording.state.events.scenes) do
-        sceneItems = sceneItems .. [[
+    local sceneTransitionItems = ""
+    for index, sceneTransition in
+        ipairs(recording.state.events.sceneTransitions) do
+        sceneTransitionItems = sceneTransitionItems .. [[
             <ITEM
-                NAME ]] .. scene.scene .. [[
+                NAME ]] .. sceneTransition.scene .. [[
 
-                POSITION ]] .. scene.start .. [[
+                POSITION ]] .. sceneTransition.start .. [[
 
-                LENGTH ]] .. ((index < #recording.state.events.scenes and
-                         recording.state.events.scenes[index + 1].start or
-                         recording.state.events.stop) - scene.start) .. [[
+                LENGTH ]] ..
+                                   ((index <
+                                       #recording.state.events.sceneTransitions and
+                                       recording.state.events.sceneTransitions[index +
+                                           1].start or
+                                       recording.state.events.stop) -
+                                       sceneTransition.start) .. [[
 
                 <SOURCE VIDEOEFFECT
                     <CODE
@@ -323,10 +334,11 @@ function recording.configuration.modal:exited()
             >
         ]]
     end
-    projectRPP = string.gsub(projectRPP, "NAME Video", sceneItems .. "%0")
+    projectRPP = string.gsub(projectRPP, "NAME Video",
+                             sceneTransitionItems .. "%0")
 
     local markers = ""
-    for index, position in recording.state.events.edits do
+    for index, position in recording.state.events.markers do
         markers = markers .. [[MARKER ]] .. index .. [[ ]] .. position ..
                       [[ ""]] .. "\n"
     end
@@ -378,17 +390,18 @@ function recording.configuration.modal:exited()
                                         [[ls "]] ..
                                             recording.configuration.paths.camera ..
                                             [["/MVI_*.MP4 | tail -n ]] ..
-                                            #recording.state.events.cameras),
+                                            #recording.state.events.cameraStarts),
                                     "[^\n]+") do
         table.insert(cameraFiles, cameraFile)
     end
-    if #cameraFiles ~= #recording.state.events.cameras then
+    if #cameraFiles ~= #recording.state.events.cameraStarts then
         local option = hs.dialog.blockAlert("Error",
                                             "The number of files in the camera SD card (" ..
                                                 #cameraFiles ..
-                                                ") is different from the number of camera events (" ..
-                                                #recording.state.events.cameras ..
-                                                ").", "Retry", "Skip")
+                                                ") is different from the number of camera start events (" ..
+                                                #recording.state.events
+                                                    .cameraStarts .. ").",
+                                            "Retry", "Skip")
         if option == "Retry" then
             goto beforeCameraFiles
         elseif option == "Skip" then
