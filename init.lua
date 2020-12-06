@@ -276,34 +276,35 @@ do
         ::endRecording::
     end
 
-    function recording.startCamera()
-        hs.dialog.blockAlert("", "", "Start/Restart Recording on the Camera")
-        recording.updateEvents(function(time)
-            hs.alert("💻 🎥 👏")
-            table.insert(recording.state.events.cameraStarts, time)
-            table.insert(recording.state.events.markers, time)
-        end)
-        if recording.state.cameraTimer ~= nil then
-            recording.state.cameraTimer:stop()
-        end
-        for _, overlay in pairs(recording.state.overlays) do
-            for _, element in pairs(overlay) do
-                element.fillColor.red = 0
-            end
-        end
-        recording.state.cameraTimer = hs.timer.doAfter(
-                                          recording.configuration.cameraDuration,
-                                          function()
-                for _, overlay in pairs(recording.state.overlays) do
-                    for _, element in pairs(overlay) do
-                        element.fillColor.red = 1
-                    end
-                end
-            end)
-    end
-
-    ::sceneTransitions::
+    ::events::
     do
+        function recording.startCamera()
+            hs.dialog
+                .blockAlert("", "", "Start/Restart Recording on the Camera")
+            recording.updateEvents(function(time)
+                hs.alert("💻 🎥 👏")
+                table.insert(recording.state.events.cameraStarts, time)
+                table.insert(recording.state.events.markers, time)
+            end)
+            if recording.state.cameraTimer ~= nil then
+                recording.state.cameraTimer:stop()
+            end
+            for _, overlay in pairs(recording.state.overlays) do
+                for _, element in pairs(overlay) do
+                    element.fillColor.red = 0
+                end
+            end
+            recording.state.cameraTimer =
+                hs.timer.doAfter(recording.configuration.cameraDuration,
+                                 function()
+                    for _, overlay in pairs(recording.state.overlays) do
+                        for _, element in pairs(overlay) do
+                            element.fillColor.red = 1
+                        end
+                    end
+                end)
+        end
+
         function recording.transitionToScene(scene)
             for _, overlay in pairs(recording.state.overlays) do
                 overlay:hide()
@@ -319,7 +320,11 @@ do
                 end)
             end)
         end
+    end
+    ::endEvents::
 
+    ::sceneTransitions::
+    do
         recording.configuration.modal:bind(recording.configuration.modifiers,
                                            "Z", function()
             recording.transitionToScene(2)
