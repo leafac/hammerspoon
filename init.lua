@@ -507,18 +507,18 @@ do
                 ::cameraStarts::
                 do
                     local items = ""
-                    for index, cameraStart in
+                    for index, position in
                         ipairs(recording.state.events.cameraStarts) do
                         items = items .. [[
                             <ITEM
-                                POSITION ]] .. cameraStart .. [[
+                                POSITION ]] .. position .. [[
 
                                 LENGTH ]] ..
                                     ((index <
                                         #recording.state.events.cameraStarts and
                                         recording.state.events.cameraStarts[index +
                                             1] or recording.state.events.stop) -
-                                        cameraStart) .. [[
+                                        position) .. [[
 
                                 <SOURCE VIDEO
                                     FILE "camera--]] .. index .. [[.mp4"
@@ -564,9 +564,9 @@ do
                 ::markers::
                 do
                     local markers = ""
-                    for index, marker in recording.state.events.markers do
+                    for index, position in recording.state.events.markers do
                         markers = markers .. [[MARKER ]] .. index .. [[ ]] ..
-                                      marker .. [[ ""]] .. "\n"
+                                      position .. [[ ""]] .. "\n"
                     end
                     project = string.gsub(project, ">%s*$", markers .. "%0")
                 end
