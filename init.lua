@@ -304,7 +304,7 @@ function recording.configuration.modal:exited()
             >
         ]]
     end
-    projectRPP = string.gsub(projectRPP, "NAME Camera", "%0\n" .. cameraItems)
+    projectRPP = string.gsub(projectRPP, "NAME Camera", cameraItems .. "%0")
 
     local sceneItems = ""
     for index, scene in ipairs(recording.state.events.scenes) do
@@ -326,7 +326,7 @@ function recording.configuration.modal:exited()
             >
         ]]
     end
-    projectRPP = string.gsub(projectRPP, "NAME Video", "%0\n" .. sceneItems)
+    projectRPP = string.gsub(projectRPP, "NAME Video", sceneItems .. "%0")
 
     local markers = ""
     for index, position in recording.state.events.edits do
