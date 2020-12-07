@@ -206,7 +206,7 @@ do
                                       "Built-in Output")
             builtInOutput:setOutputMuted(false)
             builtInOutput:setOutputVolume(20)
-            hs.audiodevice.findOutputByName("Built-in Output + BlackHole 16ch"):setDefaultOutputDevice()
+            hs.audiodevice.findOutputByName("Recording"):setDefaultOutputDevice()
             hs.screen.primaryScreen():setMode(
                 recording.configuration.frames.recording.w,
                 recording.configuration.frames.recording.h,
