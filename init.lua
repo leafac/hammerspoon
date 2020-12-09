@@ -190,7 +190,7 @@ do
             recording.state = {
                 events = {
                     cameraStarts = {},
-                    sceneTransitions = {},
+                    multicamTransitions = {},
                     markers = {},
                     stop = nil
                 },
@@ -263,7 +263,7 @@ do
             hs.application.open("OBS"):mainWindow():minimize()
             hs.execute([[npx obs-cli StartRecording]], true)
             recording.startCamera()
-            recording.transitionToScene(2)
+            recording.multicamTransition(2)
             hs.audiodevice.watcher.setCallback(
                 function(event)
                     if event == "dev#" then
@@ -305,17 +305,17 @@ do
                 end)
         end
 
-        function recording.transitionToScene(scene)
+        function recording.multicamTransition(camera)
             for _, overlay in pairs(recording.state.overlays) do
                 overlay:hide()
             end
             hs.timer.doAfter(0.1, function()
                 recording.updateEvents(function(time)
-                    table.insert(recording.state.events.sceneTransitions,
-                                 {position = time, scene = scene})
+                    table.insert(recording.state.events.multicamTransitions,
+                                 {position = time, camera = camera})
                 end)
                 hs.timer.doAfter(0.1, function()
-                    local overlay = recording.state.overlays[scene]
+                    local overlay = recording.state.overlays[camera]
                     if overlay ~= nil then overlay:show() end
                 end)
             end)
@@ -323,27 +323,21 @@ do
     end
     ::endEvents::
 
-    ::sceneTransitions::
+    ::multicamTransitions::
     do
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "Z", function()
-            recording.transitionToScene(2)
-        end)
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "A", function()
-            recording.transitionToScene(1)
-        end)
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "Q", function()
-            recording.transitionToScene(3)
-        end)
+        for camera = 1, 5 do
+            recording.configuration.modal:bind(configuration.modifiers,
+                                               tostring(camera), function()
+                recording.multicamTransition(camera)
+            end)
+        end
     end
-    ::endSceneTransitions::
+    ::endMulticamTransitions::
 
     ::recordingWindowManagement::
     do
         recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "S", function()
+                                           "A", function()
             hs.window.focusedWindow():move(
                 {
                     x = 0 / 4 * recording.configuration.frames.recording.w,
@@ -353,7 +347,7 @@ do
                 })
         end)
         recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "X", function()
+                                           "S", function()
             hs.window.focusedWindow():move(
                 {
                     x = 3 / 4 * recording.configuration.frames.recording.w,
@@ -530,24 +524,24 @@ do
                 end
                 ::endCameraStarts::
 
-                ::sceneTransitions::
+                ::multicamTransitions::
                 do
                     local items = ""
-                    for index, sceneTransition in
-                        ipairs(recording.state.events.sceneTransitions) do
+                    for index, multicamTransition in
+                        ipairs(recording.state.events.multicamTransitions) do
                         items = items .. [[
                             <ITEM
-                                NAME ]] .. sceneTransition.scene .. [[
+                                NAME ]] .. multicamTransition.camera .. [[
 
-                                POSITION ]] .. sceneTransition.position .. [[
+                                POSITION ]] .. multicamTransition.position .. [[
 
                                 LENGTH ]] ..
                                     ((index <
-                                        #recording.state.events.sceneTransitions and
-                                        recording.state.events.sceneTransitions[index +
+                                        #recording.state.events.multicamTransitions and
+                                        recording.state.events.multicamTransitions[index +
                                             1].position or
                                         recording.state.events.stop) -
-                                        sceneTransition.position) .. [[
+                                        multicamTransition.position) .. [[
 
                                 <SOURCE VIDEOEFFECT
                                     <CODE
@@ -559,7 +553,7 @@ do
                     end
                     project = string.gsub(project, "NAME Video", items .. "%0")
                 end
-                ::endSceneTransitions::
+                ::endMulticamTransitions::
 
                 ::markers::
                 do
