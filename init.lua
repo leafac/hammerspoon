@@ -102,12 +102,13 @@ end
 ::endWindowManagement::
 
 ::dateMenubar::
+local dateMenubar
 do
-    local menubar = hs.menubar.new():setClickCallback(
-                        function() hs.application.open("Calendar") end)
+    dateMenubar = hs.menubar.new():setClickCallback(
+                      function() hs.application.open("Calendar") end)
     preventGarbageCollection.dateMenubarTimer =
         hs.timer.doEvery(1, function()
-            menubar:setTitle(os.date("%Y-%m-%d  %H:%M  %A"))
+            dateMenubar:setTitle(os.date("%Y-%m-%d  %H:%M  %A"))
         end):fire()
 end
 ::endDateMenubar::
@@ -211,6 +212,7 @@ do
                 recording.configuration.frames.recording.w,
                 recording.configuration.frames.recording.h,
                 recording.configuration.frames.recording.scale)
+            dateMenubar:removeFromMenuBar()
         end
         ::endHardware::
 
@@ -443,6 +445,7 @@ do
 
         ::hardware::
         do
+            dateMenubar:returnToMenuBar()
             hs.screen.primaryScreen():setMode(
                 recording.configuration.frames.regular.w,
                 recording.configuration.frames.regular.h,
@@ -537,9 +540,11 @@ do
 
                                 LENGTH ]] ..
                                     ((index <
-                                        #recording.state.events.multicamTransitions and
-                                        recording.state.events.multicamTransitions[index +
-                                            1].position or
+                                        #recording.state.events
+                                            .multicamTransitions and
+                                        recording.state.events
+                                            .multicamTransitions[index + 1]
+                                            .position or
                                         recording.state.events.stop) -
                                         multicamTransition.position) .. [[
 
