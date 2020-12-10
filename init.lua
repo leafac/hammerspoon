@@ -587,8 +587,8 @@ do
                 hs.execute([[mv "]] .. recording.configuration.paths.events ..
                                [[" "]] .. projectDirectory .. [[/"]])
                 hs.execute([[cp "]] .. recording.configuration.paths.template ..
-                               [[/Mask - Rounded corners.png" "]] .. projectDirectory ..
-                               [[/"]])
+                               [[/Mask - Rounded corners.png" "]] ..
+                               projectDirectory .. [[/"]])
             end
             ::endStaticFiles::
 
