@@ -311,12 +311,13 @@ do
             for _, overlay in pairs(recording.state.overlays) do
                 overlay:hide()
             end
-            hs.timer.doAfter(0.1, function()
+            hs.timer.doAfter(3 / recording.configuration.frameRate, function()
                 recording.updateEvents(function(time)
                     table.insert(recording.state.events.multicamTransitions,
                                  {position = time, camera = camera})
                 end)
-                hs.timer.doAfter(0.1, function()
+                hs.timer.doAfter(3 / recording.configuration.frameRate,
+                                 function()
                     local overlay = recording.state.overlays[camera]
                     if overlay ~= nil then overlay:show() end
                 end)
