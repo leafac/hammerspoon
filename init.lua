@@ -508,15 +508,13 @@ do
                         ipairs(recording.state.events.cameraStarts) do
                         items = items .. [[
                             <ITEM
-                                POSITION ]] .. position .. [[
-
+                                POSITION ]] .. position .. "\n" .. [[
                                 LENGTH ]] ..
                                     ((index <
                                         #recording.state.events.cameraStarts and
                                         recording.state.events.cameraStarts[index +
                                             1] or recording.state.events.stop) -
-                                        position) .. [[
-
+                                        position) .. "\n" .. [[
                                 <SOURCE VIDEO
                                     FILE "camera--]] .. index .. [[.mp4"
                                 >
@@ -534,10 +532,10 @@ do
                         ipairs(recording.state.events.multicamTransitions) do
                         items = items .. [[
                             <ITEM
-                                NAME ]] .. multicamTransition.camera .. [[
-
-                                POSITION ]] .. multicamTransition.position .. [[
-
+                                NAME ]] .. multicamTransition.camera .. "\n" ..
+                                    [[
+                                POSITION ]] .. multicamTransition.position ..
+                                    "\n" .. [[
                                 LENGTH ]] ..
                                     ((index <
                                         #recording.state.events
@@ -546,8 +544,8 @@ do
                                             .multicamTransitions[index + 1]
                                             .position or
                                         recording.state.events.stop) -
-                                        multicamTransition.position) .. [[
-
+                                        multicamTransition.position) .. "\n" ..
+                                    [[
                                 <SOURCE VIDEOEFFECT
                                     <CODE
                                         | 
