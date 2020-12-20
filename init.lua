@@ -456,24 +456,24 @@ do
 
         ::project::
         do
-            ::name::
+            ::identifier::
             local projectDirectory, projectFile
             do
-                local option, name = hs.dialog.textPrompt("Name:", "", "",
-                                                          "Create Project",
-                                                          "Cancel")
+                local option, identifier =
+                    hs.dialog.textPrompt("Identifier:", "", "",
+                                         "Create Project", "Cancel")
                 if option == "Cancel" then goto endProject end
                 projectDirectory =
-                    recording.configuration.paths.videos .. "/" .. name
-                projectFile = projectDirectory .. "/" .. name .. ".RPP"
+                    recording.configuration.paths.videos .. "/" .. identifier
+                projectFile = projectDirectory .. "/" .. identifier .. ".RPP"
                 if hs.execute([[ls "]] .. projectDirectory .. [["]]) ~= "" then
                     hs.dialog.blockAlert("Error",
                                          "Directory already exists: ‘" ..
                                              projectDirectory .. "’.")
-                    goto name
+                    goto identifier
                 end
             end
-            ::endName::
+            ::endIdentifier::
 
             ::projectDirectory::
             do hs.execute([[mkdir "]] .. projectDirectory .. [["]]) end
