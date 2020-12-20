@@ -165,7 +165,6 @@ do
         recording = {
             configuration = {
                 modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
-                modifiers = {"⌘", "⌥", "⌃"},
                 paths = {
                     videos = hs.fs.pathToAbsolute("~/Videos"),
                     events = hs.fs.pathToAbsolute("~/Videos") .. "/events.json",
@@ -339,8 +338,8 @@ do
 
     ::recordingWindowManagement::
     do
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "A", function()
+        recording.configuration.modal:bind(configuration.modifiers, "F",
+                                           function()
             hs.window.focusedWindow():move(
                 {
                     x = 0 / 4 * recording.configuration.frames.recording.w,
@@ -349,8 +348,8 @@ do
                     h = 4 / 4 * recording.configuration.frames.recording.h
                 })
         end)
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "S", function()
+        recording.configuration.modal:bind(configuration.modifiers, "V",
+                                           function()
             hs.window.focusedWindow():move(
                 {
                     x = 3 / 4 * recording.configuration.frames.recording.w,
@@ -359,8 +358,8 @@ do
                     h = 3 / 4 * recording.configuration.frames.recording.h
                 })
         end)
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "E", function()
+        recording.configuration.modal:bind(configuration.modifiers, "T",
+                                           function()
             hs.window.focusedWindow():move(
                 {
                     x = 3 / 4 * recording.configuration.frames.recording.w,
@@ -369,8 +368,8 @@ do
                     h = 1 / 4 * recording.configuration.frames.recording.h
                 })
         end)
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "D", function()
+        recording.configuration.modal:bind(configuration.modifiers, "G",
+                                           function()
             hs.window.focusedWindow():move(
                 {
                     x = 3 / 4 * recording.configuration.frames.recording.w,
@@ -379,8 +378,8 @@ do
                     h = 1 / 4 * recording.configuration.frames.recording.h
                 })
         end)
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "C", function()
+        recording.configuration.modal:bind(configuration.modifiers, "B",
+                                           function()
             hs.window.focusedWindow():move(
                 {
                     x = 3 / 4 * recording.configuration.frames.recording.w,
@@ -394,8 +393,8 @@ do
 
     ::actions::
     do
-        recording.configuration.modal:bind(recording.configuration.modifiers,
-                                           "space", function()
+        recording.configuration.modal:bind(configuration.modifiers, "`",
+                                           function()
             recording.updateEvents(function(time)
                 hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
                 table.insert(recording.state.events.markers, time)
