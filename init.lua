@@ -393,7 +393,7 @@ do
 
     ::actions::
     do
-        recording.configuration.modal:bind(configuration.modifiers, "`",
+        recording.configuration.modal:bind(configuration.modifiers, "M",
                                            function()
             recording.updateEvents(function(time)
                 hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
