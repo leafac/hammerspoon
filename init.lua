@@ -662,6 +662,7 @@ do
                         [[cp "]] .. file .. [[" "]] .. projectDirectory ..
                             [[/camera--]] .. index .. [[.mp4"]])
                 end
+                hs.fs.volume.eject("/Volumes/EOS_DIGITAL")
             end
             ::endCameraFiles::
 
