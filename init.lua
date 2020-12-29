@@ -410,8 +410,9 @@ do
         end)
 
         recording.configuration.modal:bind({"⌘", "⇧"}, "2", function()
-            local option = hs.dialog.blockAlert("Stop recording on the camera",
-                                                "", "Continue Recording",
+            local option = hs.dialog.blockAlert("👏",
+                                                "Stop recording on the camera.",
+                                                "Continue Recording",
                                                 "Stop Recording")
             if option == "Continue Recording" then
                 recording.startCamera()
