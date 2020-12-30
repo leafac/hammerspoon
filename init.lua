@@ -98,10 +98,6 @@ do
         local window = hs.window.focusedWindow()
         window:moveToScreen(window:screen():next())
     end)
-    hs.hotkey.bind(configuration.modifiers, "R", function()
-        local screen = hs.screen.find("LG HDR 4K")
-        screen:rotate(screen:rotate() ~= 0 and 0 or 90)
-    end)
 end
 ::endWindowManagement::
 
