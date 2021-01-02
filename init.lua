@@ -429,6 +429,9 @@ do
             recording.updateEvents(function(time)
                 recording.state.events.stop = time
             end)
+            hs.audiodevice.watcher.setCallback(
+                function(event) -- FIXME
+                end)
             hs.audiodevice.watcher.stop()
             recording.state.cameraTimer:stop()
             hs.execute([[npx obs-cli StopRecording]], true)
