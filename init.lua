@@ -270,9 +270,7 @@ function recording:exited()
     recording.overlays = nil
 
     dateMenubar:returnToMenuBar()
-    hs.screen.primaryScreen():setMode(recording.frames.regular.w,
-                                      recording.frames.regular.h,
-                                      recording.frames.regular.scale)
+    hs.screen.primaryScreen():setMode(1280, 800, 2)
     -- FIXME
     hs.audiodevice.watcher.setCallback(function(event) end)
     hs.audiodevice.watcher.stop()
