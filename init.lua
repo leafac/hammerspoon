@@ -82,25 +82,22 @@ $ sudo rm -rf $(xcode-select -print-path) && sudo rm -rf /Library/Developer/Comm
 ]])
 end)
 
-local recording = {
-    modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
-    identifier = nil,
-    overlays = nil,
-    cameraSegments = 0,
-    cameraTimer = nil
-}
+local recording = hs.hotkey.modal.new({"⌘", "⇧"}, "2")
 
-function recording.modal:entered()
-    ::retryIdentifier::
-    local identifierOption, identifier =
-        hs.dialog.textPrompt("🚪 🗄 🪟 💡 🎧 🎤", "Identifier:", "",
-                             "Create Project", "Cancel")
-    if identifierOption == "Cancel" then return hs.reload() end
-    if hs.execute([[ls ~/Videos/']] .. identifier .. [[']]) ~= "" then
-        hs.dialog.blockAlert("Error", "Project already exists")
-        goto retryIdentifier
+function recording:entered()
+    while true do
+        local option, identifier = hs.dialog.textPrompt(
+                                       "🚪 🗄 🪟 💡 🎧 🎤",
+                                       "Identifier:", "", "Create Project",
+                                       "Cancel")
+        if option == "Cancel" then return hs.reload() end
+        if hs.execute([[ls ~/Videos/']] .. identifier .. [[']]) ~= "" then
+            hs.dialog.blockAlert("Error", "Project already exists")
+        else
+            recording.identifier = identifier
+            break
+        end
     end
-    recording.identifier = identifier
 
     hs.execute([[cp -r ~/Videos/TEMPLATE ~/Videos/']] .. recording.identifier ..
                    [[']])
@@ -155,7 +152,7 @@ function recording.modal:entered()
 
     recording.cameraSegments = 0
     recording.startCamera()
-    recording.multicamTransition(2)
+    recording.multicamSwitch(2)
 end
 
 function recording.startCamera()
@@ -175,7 +172,7 @@ function recording.startCamera()
     end)
 end
 
-function recording.multicamTransition(camera)
+function recording.multicamSwitch(camera)
     for _, overlay in pairs(recording.overlays) do overlay:hide() end
     hs.timer.doAfter(5 / 25, function()
         hs.http.get("http://localhost:4445/_/" .. ({
@@ -193,11 +190,11 @@ function recording.multicamTransition(camera)
 end
 
 for camera = 1, 5 do
-    recording.modal:bind({"⌥", "⌃"}, tostring(camera),
-                         function() recording.multicamTransition(camera) end)
+    recording:bind({"⌥", "⌃"}, tostring(camera),
+                   function() recording.multicamSwitch(camera) end)
 end
 
-recording.modal:bind({"⌥", "⌃"}, "F", function()
+recording:bind({"⌥", "⌃"}, "F", function()
     hs.window.focusedWindow():move({
         x = 0 / 4 * 1280,
         y = 0 / 4 * 720,
@@ -205,7 +202,7 @@ recording.modal:bind({"⌥", "⌃"}, "F", function()
         h = 4 / 4 * 720
     })
 end)
-recording.modal:bind({"⌥", "⌃"}, "V", function()
+recording:bind({"⌥", "⌃"}, "V", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 1 / 4 * 720,
@@ -213,7 +210,7 @@ recording.modal:bind({"⌥", "⌃"}, "V", function()
         h = 3 / 4 * 720
     })
 end)
-recording.modal:bind({"⌥", "⌃"}, "T", function()
+recording:bind({"⌥", "⌃"}, "T", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 1 / 4 * 720,
@@ -221,7 +218,7 @@ recording.modal:bind({"⌥", "⌃"}, "T", function()
         h = 1 / 4 * 720
     })
 end)
-recording.modal:bind({"⌥", "⌃"}, "G", function()
+recording:bind({"⌥", "⌃"}, "G", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 2 / 4 * 720,
@@ -229,7 +226,7 @@ recording.modal:bind({"⌥", "⌃"}, "G", function()
         h = 1 / 4 * 720
     })
 end)
-recording.modal:bind({"⌥", "⌃"}, "B", function()
+recording:bind({"⌥", "⌃"}, "B", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 3 / 4 * 720,
@@ -238,29 +235,29 @@ recording.modal:bind({"⌥", "⌃"}, "B", function()
     })
 end)
 
-recording.modal:bind({"⌥", "⌃"}, "M", function()
-    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
+recording:bind({"⌥", "⌃"}, "M", function()
     hs.http.get("http://localhost:4445/_/40157") -- Markers: Insert marker at current position
+    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
 end)
 
-recording.modal:bind({"⌥", "⌃"}, "return", function()
+recording:bind({"⌥", "⌃"}, "return", function()
     if hs.dialog.blockAlert(
         "Currently recording, do you really want to reload the Hammerspoon configuration?",
         "", "No", "Yes") == "Yes" then hs.reload() end
 end)
 
-recording.modal:bind({"⌘", "⇧"}, "2", function()
+recording:bind({"⌘", "⇧"}, "2", function()
     if hs.dialog.blockAlert("👏", "",
                             "Click me as you restart recording on the camera",
                             "Stop Recording") ==
         "Click me as you restart recording on the camera" then
         recording.startCamera()
     else
-        recording.modal:exit()
+        recording:exit()
     end
 end)
 
-function recording.modal:exited()
+function recording:exited()
     recording.cameraTimer:stop()
     recording.cameraTimer = nil
     hs.http.get(
@@ -281,27 +278,29 @@ function recording.modal:exited()
     hs.audiodevice.watcher.stop()
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
-    ::retryCameraFiles::
-    local cameraFiles = {}
-    if hs.dialog.blockAlert("", "",
-                            "Connect the camera SD card and then click me",
-                            "Skip") == "Skip" then goto endCameraFiles end
-    for cameraFile in string.gmatch(hs.execute(
-                                        [[ls /Volumes/EOS_DIGITAL/DCIM/100CANON/MVI_*.MP4 | tail -n ]] ..
-                                            recording.cameraSegments), "[^\n]+") do
-        table.insert(cameraFiles, cameraFile)
+    while true do
+        local files = {}
+        if hs.dialog.blockAlert("", "",
+                                "Connect the camera SD card and then click me",
+                                "Skip") == "Skip" then break end
+        for file in string.gmatch(hs.execute(
+                                      [[ls /Volumes/EOS_DIGITAL/DCIM/100CANON/MVI_*.MP4 | tail -n ]] ..
+                                          recording.cameraSegments), "[^\n]+") do
+            table.insert(files, file)
+        end
+        if #files ~= recording.cameraSegments then
+            hs.dialog.blockAlert("Error", "Failed to find files in SD card")
+        else
+            for index, file in ipairs(files) do
+                hs.execute([[cp ']] .. file .. [[' ~/Videos/']] ..
+                               recording.identifier .. [['/camera--]] .. index ..
+                               [[.mp4]])
+            end
+            hs.fs.volume.eject("/Volumes/EOS_DIGITAL")
+            break
+        end
     end
-    if #cameraFiles ~= recording.cameraSegments then
-        hs.dialog.blockAlert("Error", "Failed to find files in SD card")
-        goto retryCameraFiles
-    end
-    for index, file in ipairs(cameraFiles) do
-        hs.execute(
-            [[cp ']] .. file .. [[' ~/Videos/']] .. recording.identifier ..
-                [['/camera--]] .. index .. [[.mp4]])
-    end
-    hs.fs.volume.eject("/Volumes/EOS_DIGITAL")
-    ::endCameraFiles::
 
+    recording.cameraSegments = nil
     recording.identifier = nil
 end
