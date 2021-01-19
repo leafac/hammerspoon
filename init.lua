@@ -89,91 +89,37 @@ $ sudo rm -rf $(xcode-select -print-path) && sudo rm -rf /Library/Developer/Comm
 end)
 
 local recording = {
-    configuration = {
-        modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
-        paths = {
-            videos = hs.fs.pathToAbsolute("~/Videos"),
-            events = hs.fs.pathToAbsolute("~/Videos") .. "/events.json",
-            template = hs.fs.pathToAbsolute("~/Videos/TEMPLATE"),
-            camera = "/Volumes/EOS_DIGITAL/DCIM/100CANON"
-        },
-        frames = {
-            recording = {w = 1280, h = 720, scale = 2},
-            regular = {w = 1280, h = 800, scale = 2}
-        },
-        overlayPadding = 3,
-        cameraDuration = hs.timer.minutes(27),
-        frameRate = 25
-    },
-    state = nil
+    modal = hs.hotkey.modal.new({"⌘", "⇧"}, "2"),
+    identifier = nil,
+    overlays = nil,
+    cameraSegments = 0,
+    cameraTimer = nil
 }
 
-function recording.configuration.modal:entered()
-    recording.state = {
-        events = {
-            cameraStarts = {},
-            multicamTransitions = {},
-            markers = {},
-            stop = nil
-        },
-        overlays = nil,
-        cameraTimer = nil
-    }
+function recording.modal:entered()
+    ::retryIdentifier::
+    local identifierOption, identifier =
+        hs.dialog.textPrompt("🚪 🗄 🪟 💡 🎧 🎤", "Identifier:", "",
+                             "Create Project", "Cancel")
+    if identifierOption == "Cancel" then return hs.reload() end
+    if hs.execute([[ls ~/Videos/']] .. identifier .. [[']]) ~= "" then
+        hs.dialog.blockAlert("Error", "Project already exists")
+        goto retryIdentifier
+    end
+    recording.identifier = identifier
+
+    hs.execute([[cp -r ~/Videos/TEMPLATE ~/Videos/']] .. recording.identifier ..
+                   [[']])
+    hs.execute([[mv ~/Videos/']] .. recording.identifier .. [['/{TEMPLATE,']] ..
+                   recording.identifier .. [['}.RPP]])
 
     local builtInOutput = hs.audiodevice.findOutputByName("Built-in Output")
     builtInOutput:setOutputMuted(false)
     builtInOutput:setOutputVolume(20)
-    hs.audiodevice.findOutputByName("Recording"):setDefaultOutputDevice()
-    hs.screen.primaryScreen():setMode(
-        recording.configuration.frames.recording.w,
-        recording.configuration.frames.recording.h,
-        recording.configuration.frames.recording.scale)
-    dateMenubar:removeFromMenuBar()
-
-    recording.state.overlays = {
-        [1] = hs.canvas.new({
-            x = 0,
-            y = 0,
-            w = recording.configuration.frames.recording.w,
-            h = recording.configuration.frames.recording.h
-        }):appendElements({
-            type = "rectangle",
-            action = "fill",
-            frame = {
-                x = recording.configuration.frames.recording.w * 3 / 4 +
-                    recording.configuration.overlayPadding,
-                y = recording.configuration.frames.recording.h * 0 / 4 +
-                    recording.configuration.overlayPadding,
-                w = recording.configuration.frames.recording.w * 1 / 4 -
-                    recording.configuration.overlayPadding * 2,
-                h = recording.configuration.frames.recording.h * 1 / 4 -
-                    recording.configuration.overlayPadding * 2
-            },
-            fillColor = {alpha = 0.5},
-            roundedRectRadii = {
-                xRadius = configuration.roundedCornerRadius,
-                yRadius = configuration.roundedCornerRadius
-            }
-        }):behavior({"canJoinAllSpaces", "stationary"}),
-        [2] = hs.canvas.new({
-            x = 0,
-            y = 0,
-            w = recording.configuration.frames.recording.w,
-            h = recording.configuration.frames.recording.h
-        }):appendElements({
-            type = "rectangle",
-            action = "fill",
-            fillColor = {alpha = 0.5}
-        }):behavior({"canJoinAllSpaces", "stationary"})
-    }
-
-    hs.application.open("OBS")
-    hs.dialog.blockAlert("🚪 🗄 🪟 💡 🎧 🎤 🔈 💻 🎥", "",
-                         "Start Recording")
-    hs.application.open("OBS"):mainWindow():minimize()
-    hs.execute([[npx obs-cli StartRecording]], true)
-    recording.startCamera()
-    recording.multicamTransition(2)
+    local blackhole = hs.audiodevice.findOutputByName("BlackHole 2ch")
+    blackhole:setDefaultOutputDevice()
+    blackhole:setOutputMuted(false)
+    blackhole:setOutputVolume(100)
     hs.audiodevice.watcher.setCallback(function(event)
         if event == "dev#" then
             hs.dialog.blockAlert(
@@ -181,350 +127,190 @@ function recording.configuration.modal:entered()
         end
     end)
     hs.audiodevice.watcher.start()
+    hs.screen.primaryScreen():setMode(1280, 720, 2)
+    dateMenubar:removeFromMenuBar()
+
+    recording.overlays = {
+        [1] = hs.canvas.new({x = 0, y = 0, w = 1280, h = 720}):appendElements(
+            {
+                type = "rectangle",
+                action = "fill",
+                frame = {
+                    x = 1280 * 3 / 4 + 3,
+                    y = 720 * 0 / 4 + 3,
+                    w = 1280 * 1 / 4 - 3 * 2,
+                    h = 720 * 1 / 4 - 3 * 2
+                },
+                fillColor = {alpha = 0.5},
+                roundedRectRadii = {
+                    xRadius = configuration.roundedCornerRadius,
+                    yRadius = configuration.roundedCornerRadius
+                }
+            }):behavior({"canJoinAllSpaces", "stationary"}),
+        [2] = hs.canvas.new({x = 0, y = 0, w = 1280, h = 720}):appendElements(
+            {type = "rectangle", action = "fill", fillColor = {alpha = 0.5}})
+            :behavior({"canJoinAllSpaces", "stationary"})
+    }
+
+    hs.application.open("OBS")
+    hs.dialog.blockAlert("🎤 🔈 💻", "")
+    hs.application.open("OBS"):mainWindow():minimize()
+    hs.execute([[open ~/Videos/']] .. recording.identifier .. [['/']] ..
+                   recording.identifier .. [['.RPP]])
+    hs.dialog.blockAlert("🎤 🔈 🎥", "",
+                         "Click me as you start recording on the camera")
+    hs.http.get(
+        "http://localhost:4445/_/_RSa8097198b5ba34eafff45805c1727ed4e42baeb6") -- Script: leafac_OBS - Start recording.lua
+
+    recording.cameraSegments = 0
+    recording.startCamera()
+    recording.multicamTransition(2)
 end
 
 function recording.startCamera()
-    hs.dialog.blockAlert("", "", "Start/Restart Recording on the Camera")
-    recording.updateEvents(function(time)
-        hs.alert("💻 🎥 👏")
-        table.insert(recording.state.events.cameraStarts, time)
-        table.insert(recording.state.events.markers, time)
-    end)
-    if recording.state.cameraTimer ~= nil then
-        recording.state.cameraTimer:stop()
-    end
-    for _, overlay in pairs(recording.state.overlays) do
+    recording.cameraSegments = recording.cameraSegments + 1
+    hs.http.get("http://localhost:4445/_/40157") -- Markers: Insert marker at current position
+    hs.alert("REAPER OBS 🎥 👏")
+    if recording.cameraTimer ~= nil then recording.cameraTimer:stop() end
+    for _, overlay in pairs(recording.overlays) do
         for _, element in pairs(overlay) do element.fillColor.red = 0 end
     end
-    recording.state.cameraTimer = hs.timer.doAfter(
-                                      recording.configuration.cameraDuration,
-                                      function()
-            for _, overlay in pairs(recording.state.overlays) do
-                for _, element in pairs(overlay) do
-                    element.fillColor.red = 1
-                end
+    recording.cameraTimer = hs.timer.doAfter(hs.timer.minutes(27), function()
+        for _, overlay in pairs(recording.overlays) do
+            for _, element in pairs(overlay) do
+                element.fillColor.red = 1
             end
-        end)
+        end
+    end)
 end
 
 function recording.multicamTransition(camera)
-    for _, overlay in pairs(recording.state.overlays) do overlay:hide() end
-    hs.timer.doAfter(3 / recording.configuration.frameRate, function()
-        recording.updateEvents(function(time)
-            table.insert(recording.state.events.multicamTransitions,
-                         {position = time, camera = camera})
-        end)
-        hs.timer.doAfter(3 / recording.configuration.frameRate, function()
-            local overlay = recording.state.overlays[camera]
+    for _, overlay in pairs(recording.overlays) do overlay:hide() end
+    hs.timer.doAfter(5 / 25, function()
+        hs.http.get("http://localhost:4445/_/" .. ({
+            "_RS0ef00f2c7fa13a89a670ae0ceebab188f76bdb39",
+            "_RS03c9eeea5a76cf51ebdf036cfc01c627d8814dbf",
+            "_RS309d84519b55ca7bf4054c61375ddc0c9af0c7d2",
+            "_RSd61147b2cb175b462459e920c43c47922bcbeaf5",
+            "_RSf7a6434cba550ccea54620a8eb54f8fe8b15fb4a"
+        })[camera]) -- Script: leafac_Multicam - Insert camera switch marker to camera at current position.lua
+        hs.timer.doAfter(5 / 25, function()
+            local overlay = recording.overlays[camera]
             if overlay ~= nil then overlay:show() end
         end)
     end)
 end
 
 for camera = 1, 5 do
-    recording.configuration.modal:bind(configuration.modifiers,
-                                       tostring(camera), function()
-        recording.multicamTransition(camera)
-    end)
+    recording.modal:bind(configuration.modifiers, tostring(camera),
+                         function() recording.multicamTransition(camera) end)
 end
 
-recording.configuration.modal:bind(configuration.modifiers, "F", function()
+recording.modal:bind(configuration.modifiers, "F", function()
     hs.window.focusedWindow():move({
-        x = 0 / 4 * recording.configuration.frames.recording.w,
-        y = 0 / 4 * recording.configuration.frames.recording.h,
-        w = 3 / 4 * recording.configuration.frames.recording.w,
-        h = 4 / 4 * recording.configuration.frames.recording.h
+        x = 0 / 4 * 1280,
+        y = 0 / 4 * 720,
+        w = 3 / 4 * 1280,
+        h = 4 / 4 * 720
     })
 end)
-recording.configuration.modal:bind(configuration.modifiers, "V", function()
+recording.modal:bind(configuration.modifiers, "V", function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frames.recording.w,
-        y = 1 / 4 * recording.configuration.frames.recording.h,
-        w = 1 / 4 * recording.configuration.frames.recording.w,
-        h = 3 / 4 * recording.configuration.frames.recording.h
+        x = 3 / 4 * 1280,
+        y = 1 / 4 * 720,
+        w = 1 / 4 * 1280,
+        h = 3 / 4 * 720
     })
 end)
-recording.configuration.modal:bind(configuration.modifiers, "T", function()
+recording.modal:bind(configuration.modifiers, "T", function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frames.recording.w,
-        y = 1 / 4 * recording.configuration.frames.recording.h,
-        w = 1 / 4 * recording.configuration.frames.recording.w,
-        h = 1 / 4 * recording.configuration.frames.recording.h
+        x = 3 / 4 * 1280,
+        y = 1 / 4 * 720,
+        w = 1 / 4 * 1280,
+        h = 1 / 4 * 720
     })
 end)
-recording.configuration.modal:bind(configuration.modifiers, "G", function()
+recording.modal:bind(configuration.modifiers, "G", function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frames.recording.w,
-        y = 2 / 4 * recording.configuration.frames.recording.h,
-        w = 1 / 4 * recording.configuration.frames.recording.w,
-        h = 1 / 4 * recording.configuration.frames.recording.h
+        x = 3 / 4 * 1280,
+        y = 2 / 4 * 720,
+        w = 1 / 4 * 1280,
+        h = 1 / 4 * 720
     })
 end)
-recording.configuration.modal:bind(configuration.modifiers, "B", function()
+recording.modal:bind(configuration.modifiers, "B", function()
     hs.window.focusedWindow():move({
-        x = 3 / 4 * recording.configuration.frames.recording.w,
-        y = 3 / 4 * recording.configuration.frames.recording.h,
-        w = 1 / 4 * recording.configuration.frames.recording.w,
-        h = 1 / 4 * recording.configuration.frames.recording.h
+        x = 3 / 4 * 1280,
+        y = 3 / 4 * 720,
+        w = 1 / 4 * 1280,
+        h = 1 / 4 * 720
     })
 end)
 
-recording.configuration.modal:bind(configuration.modifiers, "M", function()
-    recording.updateEvents(function(time)
-        hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
-        table.insert(recording.state.events.markers, time)
-    end)
+recording.modal:bind(configuration.modifiers, "M", function()
+    hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
+    hs.http.get("http://localhost:4445/_/40157") -- Markers: Insert marker at current position
 end)
 
-recording.configuration.modal:bind(configuration.modifiers, "return", function()
-    local option = hs.dialog.blockAlert(
-                       "Currently recording, do you really want to reload the Hammerspoon configuration?",
-                       "", "No", "Yes")
-    if option == "Yes" then hs.reload() end
+recording.modal:bind(configuration.modifiers, "return", function()
+    if hs.dialog.blockAlert(
+        "Currently recording, do you really want to reload the Hammerspoon configuration?",
+        "", "No", "Yes") == "Yes" then hs.reload() end
 end)
 
-recording.configuration.modal:bind({"⌘", "⇧"}, "2", function()
-    local option = hs.dialog.blockAlert("👏", "Stop recording on the camera.",
-                                        "Continue Recording", "Stop Recording")
-    if option == "Continue Recording" then
+recording.modal:bind({"⌘", "⇧"}, "2", function()
+    if hs.dialog.blockAlert("👏", "",
+                            "Click me as you restart recording on the camera",
+                            "Stop Recording") ==
+        "Click me as you restart recording on the camera" then
         recording.startCamera()
-    elseif option == "Stop Recording" then
-        recording.configuration.modal:exit()
+    else
+        recording.modal:exit()
     end
 end)
 
-function recording.configuration.modal:exited()
-    recording.updateEvents(function(time) recording.state.events.stop = time end)
+function recording.modal:exited()
+    recording.cameraTimer:stop()
+    recording.cameraTimer = nil
+    hs.http.get(
+        "http://localhost:4445/_/_RS40031326265963e3606b3fd8fc73993a6243a2da") -- Script: leafac_OBS - Stop recording.lua
+    hs.application.open("OBS"):kill()
+    hs.execute([[open ~/Videos/']] .. recording.identifier .. [['/']] ..
+                   recording.identifier .. [['.RPP]])
+
+    for _, overlay in pairs(recording.overlays) do overlay:delete() end
+    recording.overlays = nil
+
+    dateMenubar:returnToMenuBar()
+    hs.screen.primaryScreen():setMode(recording.frames.regular.w,
+                                      recording.frames.regular.h,
+                                      recording.frames.regular.scale)
     -- FIXME
     hs.audiodevice.watcher.setCallback(function(event) end)
     hs.audiodevice.watcher.stop()
-    recording.state.cameraTimer:stop()
-    hs.execute([[npx obs-cli StopRecording]], true)
-    hs.application.open("OBS"):kill()
-
-    for _, overlay in pairs(recording.state.overlays) do overlay:delete() end
-
-    dateMenubar:returnToMenuBar()
-    hs.screen.primaryScreen():setMode(recording.configuration.frames.regular.w,
-                                      recording.configuration.frames.regular.h,
-                                      recording.configuration.frames.regular
-                                          .scale)
     hs.audiodevice.findOutputByName("Built-in Output"):setDefaultOutputDevice()
 
-    ::project::
-    do
-        ::identifier::
-        local projectDirectory, projectFile
-        do
-            local option, identifier = hs.dialog.textPrompt("Identifier:", "",
-                                                            "",
-                                                            "Create Project",
-                                                            "Cancel")
-            if option == "Cancel" then goto endProject end
-            projectDirectory = recording.configuration.paths.videos .. "/" ..
-                                   identifier
-            projectFile = projectDirectory .. "/" .. identifier .. ".RPP"
-            if hs.execute([[ls "]] .. projectDirectory .. [["]]) ~= "" then
-                hs.dialog.blockAlert("Error", "Directory already exists: ‘" ..
-                                         projectDirectory .. "’.")
-                goto identifier
-            end
-        end
-        ::endIdentifier::
-
-        hs.execute([[mkdir "]] .. projectDirectory .. [["]])
-
-        ::REAPER::
-        do
-            local project
-            ::readTemplate::
-            do
-                local fileHandle = assert(
-                                       io.open(
-                                           recording.configuration.paths
-                                               .template .. "/TEMPLATE.RPP", "r"))
-                project = fileHandle:read("a")
-                fileHandle:close()
-            end
-            ::endReadTemplate::
-
-            ::templateItemslengths::
-            do
-                project = string.gsub(project, "LENGTH %d+",
-                                      "LENGTH " .. recording.state.events.stop)
-            end
-            ::endTemplateItemsLengths::
-
-            ::cameraStarts::
-            do
-                local items = ""
-                for index, position in ipairs(
-                                           recording.state.events.cameraStarts) do
-                    items = items .. [[
-                            <ITEM
-                                POSITION ]] .. position .. "\n" .. [[
-                                LENGTH ]] ..
-                                ((index < #recording.state.events.cameraStarts and
-                                    recording.state.events.cameraStarts[index +
-                                        1] or recording.state.events.stop) -
-                                    position) .. "\n" .. [[
-                                <SOURCE VIDEO
-                                    FILE "camera--]] .. index .. [[.mp4"
-                                >
-                            >
-                        ]]
-                end
-                project = string.gsub(project, "NAME Camera", items .. "%0")
-            end
-            ::endCameraStarts::
-
-            ::multicamTransitions::
-            do
-                local items = ""
-                for index, multicamTransition in
-                    ipairs(recording.state.events.multicamTransitions) do
-                    items = items .. [[
-                            <ITEM
-                                NAME ]] .. multicamTransition.camera .. "\n" ..
-                                [[
-                                POSITION ]] .. multicamTransition.position ..
-                                "\n" .. [[
-                                LENGTH ]] ..
-                                ((index <
-                                    #recording.state.events.multicamTransitions and
-                                    recording.state.events.multicamTransitions[index +
-                                        1].position or
-                                    recording.state.events.stop) -
-                                    multicamTransition.position) .. "\n" .. [[
-                                <SOURCE VIDEOEFFECT
-                                    <CODE
-                                        | 
-                                    >
-                                >
-                            >
-                        ]]
-                end
-                project = string.gsub(project, "NAME Video", items .. "%0")
-            end
-            ::endMulticamTransitions::
-
-            ::markers::
-            do
-                local markers = ""
-                for index, position in ipairs(recording.state.events.markers) do
-                    markers = markers .. [[MARKER ]] .. index .. [[ ]] ..
-                                  position .. [[ ""]] .. "\n"
-                end
-                project = string.gsub(project, ">%s*$", markers .. "%0")
-            end
-            ::endMarkers::
-
-            ::writeProject::
-            do
-                local fileHandle = assert(io.open(projectFile, "w"))
-                fileHandle:write(project)
-                fileHandle:close()
-            end
-            ::endWriteProject::
-        end
-        ::endREAPER::
-
-        ::staticFiles::
-        do
-            hs.execute([[mv "]] .. recording.configuration.paths.events ..
-                           [[" "]] .. projectDirectory .. [[/"]])
-            hs.execute([[cp "]] .. recording.configuration.paths.template ..
-                           [[/leafac_Mask - Rounded corners.png" "]] ..
-                           projectDirectory .. [[/"]])
-        end
-        ::endStaticFiles::
-
-        ::remuxRecording::
-        do
-            local recordingFile = string.match(
-                                      hs.execute(
-                                          [[ls "]] ..
-                                              recording.configuration.paths
-                                                  .videos ..
-                                              [["/*.mkv | tail -n 1]]), "[^\n]+")
-            if recordingFile == "" then
-                local option = hs.dialog.blockAlert("Error",
-                                                    "Failed to find recording file: ‘" ..
-                                                        recording.configuration
-                                                            .paths.videos ..
-                                                        "/*.mkv’.", "Retry",
-                                                    "Skip")
-                if option == "Retry" then
-                    goto remuxRecording
-                elseif option == "Skip" then
-                    goto endRemuxRecording
-                end
-            end
-            hs.execute([["]] .. recording.configuration.paths.template ..
-                           [[/ffmpeg" -i "]] .. recordingFile ..
-                           [[" -map 0:0 -c copy "]] .. projectDirectory ..
-                           [[/computer.mp4" -map_channel 0.1.0 "]] ..
-                           projectDirectory .. [[/microphone.wav" -map 0:2 "]] ..
-                           projectDirectory .. [[/computer.wav" && mv "]] ..
-                           recordingFile .. [[" ~/.Trash]])
-        end
-        ::endRemuxRecording::
-
-        ::cameraFiles::
-        do
-            local option = hs.dialog.blockAlert("", "",
-                                                "Connect the camera SD card and then click me",
-                                                "Skip")
-            if option == "Skip" then goto endCameraFiles end
-            ::retry::
-            local cameraFiles = {}
-            for cameraFile in string.gmatch(
-                                  hs.execute(
-                                      [[ls "]] ..
-                                          recording.configuration.paths.camera ..
-                                          [["/MVI_*.MP4 | tail -n ]] ..
-                                          #recording.state.events.cameraStarts),
-                                  "[^\n]+") do
-                table.insert(cameraFiles, cameraFile)
-            end
-            if #cameraFiles ~= #recording.state.events.cameraStarts then
-                local option = hs.dialog.blockAlert("Error",
-                                                    "The number of files in the camera SD card (" ..
-                                                        #cameraFiles ..
-                                                        ") is different from the number of camera start events (" ..
-                                                        #recording.state.events
-                                                            .cameraStarts ..
-                                                        ").", "Retry", "Skip")
-                if option == "Retry" then
-                    goto retry
-                elseif option == "Skip" then
-                    goto endCameraFiles
-                end
-            end
-            for index, file in ipairs(cameraFiles) do
-                hs.execute([[cp "]] .. file .. [[" "]] .. projectDirectory ..
-                               [[/camera--]] .. index .. [[.mp4"]])
-            end
-            hs.fs.volume.eject("/Volumes/EOS_DIGITAL")
-        end
-        ::endCameraFiles::
-
-        ::openProject::
-        do hs.open(projectFile) end
-        ::endOpenProject::
+    ::retryCameraFiles::
+    local cameraFiles = {}
+    if hs.dialog.blockAlert("", "",
+                            "Connect the camera SD card and then click me",
+                            "Skip") == "Skip" then goto endCameraFiles end
+    for cameraFile in string.gmatch(hs.execute(
+                                        [[ls /Volumes/EOS_DIGITAL/DCIM/100CANON/MVI_*.MP4 | tail -n ]] ..
+                                            recording.cameraSegments), "[^\n]+") do
+        table.insert(cameraFiles, cameraFile)
     end
-    ::endProject::
-end
+    if #cameraFiles ~= recording.cameraSegments then
+        hs.dialog.blockAlert("Error", "Failed to find files in SD card")
+        goto retryCameraFiles
+    end
+    for index, file in ipairs(cameraFiles) do
+        hs.execute(
+            [[cp ']] .. file .. [[' ~/Videos/']] .. recording.identifier ..
+                [['/camera--]] .. index .. [[.mp4]])
+    end
+    hs.fs.volume.eject("/Volumes/EOS_DIGITAL")
+    ::endCameraFiles::
 
-function recording.updateEvents(updater)
-    local streamingStatus = hs.execute([[npx obs-cli GetStreamingStatus]], true)
-    local hours, minutes, seconds, milliseconds =
-        string.match(hs.json.decode(streamingStatus).recTimecode,
-                     "(%d%d):(%d%d):(%d%d).(%d%d%d)")
-    updater(math.floor(
-                (hours * 60 * 60 + minutes * 60 + seconds + milliseconds / 1000) *
-                    recording.configuration.frameRate) /
-                recording.configuration.frameRate)
-    hs.json.write(recording.state.events, recording.configuration.paths.events,
-                  true, true)
+    recording.identifier = nil
 end
