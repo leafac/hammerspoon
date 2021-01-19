@@ -1,46 +1,43 @@
 hs.alert("Hammerspoon configuration loaded")
 
-local configuration = {modifiers = {"⌥", "⌃"}, roundedCornerRadius = 10}
-hs.window.animationDuration = 0
-
-hs.hotkey.bind(configuration.modifiers, "return", function() hs.reload() end)
-hs.hotkey.bind(configuration.modifiers, ",",
+hs.hotkey.bind({"⌥", "⌃"}, "return", function() hs.reload() end)
+hs.hotkey.bind({"⌥", "⌃"}, ",",
                function() hs.execute([[code ~/.hammerspoon]], true) end)
-hs.hotkey.bind(configuration.modifiers, "space",
-               function() hs.toggleConsole() end)
-hs.hotkey.bind(configuration.modifiers, "escape", function()
+hs.hotkey.bind({"⌥", "⌃"}, "space", function() hs.toggleConsole() end)
+hs.hotkey.bind({"⌥", "⌃"}, "escape", function()
     hs.osascript.applescript("beep")
     hs.sound.getByName("Submarine"):play()
 end)
 
-hs.hotkey.bind(configuration.modifiers, "W", function()
+hs.window.animationDuration = 0
+hs.hotkey.bind({"⌥", "⌃"}, "W", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 2 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "E", function()
+hs.hotkey.bind({"⌥", "⌃"}, "E", function()
     hs.window.focusedWindow():move({x = 1 / 2, y = 0 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "D", function()
+hs.hotkey.bind({"⌥", "⌃"}, "D", function()
     hs.window.focusedWindow():move({x = 1 / 2, y = 0 / 2, w = 1 / 2, h = 2 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "C", function()
+hs.hotkey.bind({"⌥", "⌃"}, "C", function()
     hs.window.focusedWindow():move({x = 1 / 2, y = 1 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "X", function()
+hs.hotkey.bind({"⌥", "⌃"}, "X", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 1 / 2, w = 2 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "Z", function()
+hs.hotkey.bind({"⌥", "⌃"}, "Z", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 1 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "A", function()
+hs.hotkey.bind({"⌥", "⌃"}, "A", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 1 / 2, h = 2 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "Q", function()
+hs.hotkey.bind({"⌥", "⌃"}, "Q", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 1 / 2, h = 1 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "S", function()
+hs.hotkey.bind({"⌥", "⌃"}, "S", function()
     hs.window.focusedWindow():move({x = 0 / 2, y = 0 / 2, w = 2 / 2, h = 2 / 2})
 end)
-hs.hotkey.bind(configuration.modifiers, "tab", function()
+hs.hotkey.bind({"⌥", "⌃"}, "tab", function()
     local window = hs.window.focusedWindow()
     window:moveToScreen(window:screen():next())
 end)
@@ -67,10 +64,7 @@ local function startScreenRoundedCorners()
                 type = "rectangle",
                 action = "fill",
                 compositeRule = "sourceOut",
-                roundedRectRadii = {
-                    xRadius = configuration.roundedCornerRadius,
-                    yRadius = configuration.roundedCornerRadius
-                }
+                roundedRectRadii = {xRadius = 10, yRadius = 10}
             }):behavior({"canJoinAllSpaces", "stationary"}):show())
     end
 end
@@ -78,7 +72,7 @@ startScreenRoundedCorners()
 _G.preventGarbageCollectionOfScreenRoundedCornersWatcher =
     hs.screen.watcher.new(function() startScreenRoundedCorners() end):start()
 
-hs.hotkey.bind(configuration.modifiers, "P", function()
+hs.hotkey.bind({"⌥", "⌃"}, "P", function()
     hs.dialog.blockAlert("", [[
 Font smoothing in Big Sur (https://tonsky.me/blog/monitors/):
 $ defaults -currentHost write -g AppleFontSmoothing -int 0
@@ -142,10 +136,7 @@ function recording.modal:entered()
                     h = 720 * 1 / 4 - 3 * 2
                 },
                 fillColor = {alpha = 0.5},
-                roundedRectRadii = {
-                    xRadius = configuration.roundedCornerRadius,
-                    yRadius = configuration.roundedCornerRadius
-                }
+                roundedRectRadii = {xRadius = 10, yRadius = 10}
             }):behavior({"canJoinAllSpaces", "stationary"}),
         [2] = hs.canvas.new({x = 0, y = 0, w = 1280, h = 720}):appendElements(
             {type = "rectangle", action = "fill", fillColor = {alpha = 0.5}})
@@ -202,11 +193,11 @@ function recording.multicamTransition(camera)
 end
 
 for camera = 1, 5 do
-    recording.modal:bind(configuration.modifiers, tostring(camera),
+    recording.modal:bind({"⌥", "⌃"}, tostring(camera),
                          function() recording.multicamTransition(camera) end)
 end
 
-recording.modal:bind(configuration.modifiers, "F", function()
+recording.modal:bind({"⌥", "⌃"}, "F", function()
     hs.window.focusedWindow():move({
         x = 0 / 4 * 1280,
         y = 0 / 4 * 720,
@@ -214,7 +205,7 @@ recording.modal:bind(configuration.modifiers, "F", function()
         h = 4 / 4 * 720
     })
 end)
-recording.modal:bind(configuration.modifiers, "V", function()
+recording.modal:bind({"⌥", "⌃"}, "V", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 1 / 4 * 720,
@@ -222,7 +213,7 @@ recording.modal:bind(configuration.modifiers, "V", function()
         h = 3 / 4 * 720
     })
 end)
-recording.modal:bind(configuration.modifiers, "T", function()
+recording.modal:bind({"⌥", "⌃"}, "T", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 1 / 4 * 720,
@@ -230,7 +221,7 @@ recording.modal:bind(configuration.modifiers, "T", function()
         h = 1 / 4 * 720
     })
 end)
-recording.modal:bind(configuration.modifiers, "G", function()
+recording.modal:bind({"⌥", "⌃"}, "G", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 2 / 4 * 720,
@@ -238,7 +229,7 @@ recording.modal:bind(configuration.modifiers, "G", function()
         h = 1 / 4 * 720
     })
 end)
-recording.modal:bind(configuration.modifiers, "B", function()
+recording.modal:bind({"⌥", "⌃"}, "B", function()
     hs.window.focusedWindow():move({
         x = 3 / 4 * 1280,
         y = 3 / 4 * 720,
@@ -247,12 +238,12 @@ recording.modal:bind(configuration.modifiers, "B", function()
     })
 end)
 
-recording.modal:bind(configuration.modifiers, "M", function()
+recording.modal:bind({"⌥", "⌃"}, "M", function()
     hs.alert("✂️", {}, hs.screen.mainScreen(), 0.2)
     hs.http.get("http://localhost:4445/_/40157") -- Markers: Insert marker at current position
 end)
 
-recording.modal:bind(configuration.modifiers, "return", function()
+recording.modal:bind({"⌥", "⌃"}, "return", function()
     if hs.dialog.blockAlert(
         "Currently recording, do you really want to reload the Hammerspoon configuration?",
         "", "No", "Yes") == "Yes" then hs.reload() end
