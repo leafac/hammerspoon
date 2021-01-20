@@ -299,6 +299,9 @@ function recording:exited()
         end
     end
 
+    hs.http.get(
+        "http://localhost:4445/_/_RSf6a2bc13045b9dc07fb82fa9c3e86f9f93ee4b9d") -- Script: leafac_TEMPLATE.lua
+
     recording.cameraSegments = nil
     recording.identifier = nil
 end
