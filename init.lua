@@ -87,7 +87,7 @@ local recording = hs.hotkey.modal.new({"⌘", "⇧"}, "2")
 function recording:entered()
     while true do
         local option, identifier = hs.dialog.textPrompt(
-                                       "🚪 🗄 🪟 💡 🎧 🎤",
+                                       "🏠 💡 🎧 🎤",
                                        "Identifier:", "", "Create Project",
                                        "Cancel")
         if option == "Cancel" then return hs.reload() end
