@@ -108,7 +108,7 @@ function recording:entered()
         end
     end)
     hs.audiodevice.watcher.start()
-    hs.screen.primaryScreen():setMode(1280, 720, 2)
+    hs.screen.primaryScreen():setMode(1280, 720, 2, 60, 8)
     dateMenubar:removeFromMenuBar()
 
     recording.overlays = {
@@ -260,7 +260,7 @@ function recording:exited()
     recording.overlays = nil
 
     dateMenubar:returnToMenuBar()
-    hs.screen.primaryScreen():setMode(1280, 800, 2)
+    hs.screen.primaryScreen():setMode(1280, 800, 2, 60, 8)
     -- FIXME
     hs.audiodevice.watcher.setCallback(function(event) end)
     hs.audiodevice.watcher.stop()
