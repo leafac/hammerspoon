@@ -76,10 +76,10 @@ local recording = hs.hotkey.modal.new({"⌘", "⇧"}, "2")
 
 function recording:entered()
     while true do
-        local option, identifier = hs.dialog.textPrompt(
-                                       "🏠 💡 🎧 🎤",
-                                       "Identifier:", "", "Create Project",
-                                       "Cancel")
+        local option, identifier = hs.dialog.textPrompt("🏠 💡 🎧 🎤",
+                                                        "Identifier:", "",
+                                                        "Create Project",
+                                                        "Cancel")
         if option == "Cancel" then return hs.reload() end
         if hs.execute([[ls ~/Videos/']] .. identifier .. [[']]) ~= "" then
             hs.dialog.blockAlert("Error", "Project already exists")
@@ -108,7 +108,7 @@ function recording:entered()
         end
     end)
     hs.audiodevice.watcher.start()
-    hs.screen.primaryScreen():setMode(1280, 720, 2, 60, 8)
+    hs.screen.primaryScreen():setMode(1280, 720, 2, 0, 8)
     dateMenubar:removeFromMenuBar()
 
     recording.overlays = {
@@ -260,7 +260,7 @@ function recording:exited()
     recording.overlays = nil
 
     dateMenubar:returnToMenuBar()
-    hs.screen.primaryScreen():setMode(1280, 800, 2, 60, 8)
+    hs.screen.primaryScreen():setMode(1280, 800, 2, 0, 8)
     -- FIXME
     hs.audiodevice.watcher.setCallback(function(event) end)
     hs.audiodevice.watcher.stop()
